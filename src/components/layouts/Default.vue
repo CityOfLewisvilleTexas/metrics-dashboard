@@ -151,7 +151,7 @@ export default {
 			},
 			config3: {
 				compid: 'g3-kpi',
-				recordnumber: '653A370A915C4EDA8FC2AA46E8957DCE',
+				recordnumber: 'BFDAC955B09D4E96A1B1ECF83B777EE0', //653A370A915C4EDA8FC2AA46E8957DCE
 				editable: false
 			},
 			config4: {
