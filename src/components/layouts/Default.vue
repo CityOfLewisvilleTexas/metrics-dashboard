@@ -186,7 +186,9 @@ export default {
 				compid: 'potholes',
 				height: '100%',
 				title: 'Pothole Work Orders',
-				url: '//lewisville.maps.arcgis.com/apps/Embed/index.html?webmap=de43ec2915354832b2b36e719b84e164&amp;extent=-97.2252,32.9672,-96.7181,33.1355&zoom=true&previewImage=false&scale=false&disable_scroll=true&theme=light'
+				url: '//lewisville.maps.arcgis.com/apps/Embed/index.html?webmap=de43ec2915354832b2b36e719b84e164&amp;extent=-97.2252,32.9672,-96.7181,33.1355&zoom=true&previewImage=false&scale=false&disable_scroll=true&theme=light',
+				//url: 'http://lewisville.maps.arcgis.com/apps/webappviewer/index.html?id=1457af61a84445c69ed64d1fb081984d',
+				external_url: {display: true, text: 'Report Pothole', url: 'https://request-lewisvilletx.mycusthelp.com/webapp/_rs/(S(aks2iyjzg5k4wua5qfgjv0vd))/RequestSelect.aspx?sSessionID=198491487OJUBGRIZYBUQNWOFGX[SZTRODDSBLKQ'}
 			},
 			config10: {
 				compid: 'traffic',
