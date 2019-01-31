@@ -197,7 +197,7 @@ export default {
 			config11: {
 				id: 'g11-textbox',
 				arrowPos: 'left',
-				body: `The City has 6 Inspectors who perform building inspections daily Monday through Friday.  The City's goal is to conduct an average of 14 inspections per inspector per day.  If the number of inspections on any single day varies greatly from that goal, it could be due to more complicated inspections being performed that day, an Inspector off of work that day, etc.  However, a trend downward in the number of inspections being performed would indicate an area of review.`
+				body: `The City has 6 Inspectors who perform building inspections daily Monday through Friday.  The City's goal is to conduct an average of 10 inspections per inspector per day.  If the number of inspections on any single day varies greatly from that goal, it could be due to more complicated inspections being performed that day, an Inspector off of work that day, etc.  However, a trend downward in the number of inspections being performed would indicate an area of review.`
 			}
 		}
 	},
