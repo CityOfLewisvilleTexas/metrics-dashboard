@@ -186,8 +186,14 @@ export default {
 				compid: 'potholes',
 				height: '100%',
 				title: 'Pothole Work Orders',
-				url: '//lewisville.maps.arcgis.com/apps/Embed/index.html?webmap=de43ec2915354832b2b36e719b84e164&amp;extent=-97.2252,32.9672,-96.7181,33.1355&zoom=true&previewImage=false&scale=false&disable_scroll=true&theme=light'
-			},
+        url: '//lewisville.maps.arcgis.com/apps/Embed/index.html?webmap=de43ec2915354832b2b36e719b84e164&amp;extent=-97.2252,32.9672,-96.7181,33.1355&zoom=true&previewImage=false&scale=false&disable_scroll=true&theme=light',
+				//url: 'http://lewisville.maps.arcgis.com/apps/webappviewer/index.html?id=1457af61a84445c69ed64d1fb081984d',
+				external_url: {
+					display: true, 
+					text: 'Report Pothole', 
+					url: 'https://request-lewisvilletx.mycusthelp.com/webapp/_rs/(S(aks2iyjzg5k4wua5qfgjv0vd))/RequestSelect.aspx?sSessionID=198491487OJUBGRIZYBUQNWOFGX[SZTRODDSBLKQ'
+				 }		
+		  },
 			config10: {
 				compid: 'traffic',
 				title: 'Travel Conditions'
@@ -195,7 +201,7 @@ export default {
 			config11: {
 				id: 'g11-textbox',
 				arrowPos: 'left',
-				body: `The City has 6 Inspectors who perform building inspections daily Monday through Friday.  The City's goal is to conduct an average of 14 inspections per inspector per day.  If the number of inspections on any single day varies greatly from that goal, it could be due to more complicated inspections being performed that day, an Inspector off of work that day, etc.  However, a trend downward in the number of inspections being performed would indicate an area of review.`
+				body: `The City has 6 Inspectors who perform building inspections daily Monday through Friday.  The City's goal is to conduct an average of 10 inspections per inspector per day.  If the number of inspections on any single day varies greatly from that goal, it could be due to more complicated inspections being performed that day, an Inspector off of work that day, etc.  However, a trend downward in the number of inspections being performed would indicate an area of review.`
 			}
 		}
 	},
