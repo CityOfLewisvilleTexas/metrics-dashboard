@@ -1,5 +1,5 @@
 <template>
-	<div :id="config.compid" class="card" :class="{ donna: $route.name == 'Donna' }">
+	<div :id="config.compid" class="card" :class="{ donna: $route.name == 'Donna', 'met-carousel': $route.name == 'Carousel' }">
 		<div class="title grey lighten-2 grey-text text-darken-1 left-align" v-if="!isLoading">
 			{{ department }}
 			<small class="grey-text">( {{ metrics.length }} )</small>
@@ -75,11 +75,11 @@
 				<thead>
 					<tr>
 						<th class="grey-text">Metric</th>
-						<th class="grey-text" v-if="department == 'All Departments'">Dept</th>
+						<th class="grey-text hide-on-small-only" v-if="department == 'All Departments'">Dept</th>
 						<th class="grey-text" v-if="!isStats">Goal</th>
 						<th class="center-align grey-text">Value</th>
-						<th class="center-align grey-text">Weekly Avg</th>
-						<th class="center-align grey-text">Monthly Avg</th>
+						<th class="center-align grey-text hide-on-med-and-down">Weekly Avg</th>
+						<th class="center-align grey-text hide-on-small-only">Monthly Avg</th>
 						<th class="center-align grey-text" v-if="admin">Location</th>
 						<th class="center-align grey-text" v-if="admin">Edit</th>
 					</tr>
@@ -87,15 +87,15 @@
 				<tbody>
 					<tr v-for="metric in splitMetrics[page-1]">
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2">{{ metric.realtimeshortname }}</td>
-						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="department == 'All Departments'">{{ metric.Department }}</td>
+						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="department == 'All Departments'">{{ metric.Department }}</td>
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="!isStats">{{ metric.metricgoal }}</td>
 						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.CurrentValue, metric) }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.WeeklyValue, metric) }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.MonthlyValue, metric) }}
 						</td>
 						<td class="center-align grey-text text-darken-2" v-if="admin">
@@ -361,6 +361,38 @@ export default {
 .donna td {
 	padding: 8px 5px;
 }
+
+.met-carousel td {
+	padding: 5px 5px;
+}
+.met-carousel .btn, .met-carousel .progress .determinate, .met-carousel .switch label input[type=checkbox]:checked + .lever:after {
+	background-color: #5A348D;
+}
+.met-carousel .title {
+	background-color: #5A348D !important;
+}
+.met-carousel li a.active {
+	background-color: #73529E !important;
+}
+.met-carousel .progress {
+	background-color: #CEC2DD;
+}
+.met-carousel .switch label input[type=checkbox]:checked + .lever{
+	background-color: #AD9AC6;
+}
+.met-carousel .pagination li.active {
+	background-color: #9FC24C;
+}
+.met-carousel .dropdown-content li > a {
+	color: #5A348D;
+}
+.met-carousel th {
+	color: #5A348D !important;
+}
+.met-carousel .title, .met-carousel .title small {
+	color: #FFF !important;
+}
+
 .background {
 	height: 100%;
 	padding: 16px 24px;

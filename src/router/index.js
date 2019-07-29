@@ -7,6 +7,7 @@ import Stats from '@/components/layouts/Stats'
 import FixedDemo from '@/components/layouts/FixedDemo'
 import Donna from '@/components/layouts/Donna'
 import Admin from '@/components/layouts/Admin'
+import Carousel from '@/components/layouts/Carousel'
 import Demo from '@/components/layouts/Demo'
 
 
@@ -62,6 +63,11 @@ export default new Router({
       path: '/dashboard/admin/',
       name: 'Admin',
       component: Admin
+    },
+    {
+      path: '/dashboard/carousel/',
+      name: 'Carousel',
+      component: Carousel
     },
     {
       path: '/demo',
