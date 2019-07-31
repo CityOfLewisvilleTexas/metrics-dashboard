@@ -51,7 +51,8 @@ export default {
 	},
 	// START HERE
 	mounted() {
-		this.$store.commit('setSite', 'metrics')
+		//this.$store.commit('setSite', 'metrics')
+		if(this.$store.state.metrics.length == 0) this.fetchMetrics()
 	},
 	// called as component is removed
 	beforeDestroy() {
@@ -59,11 +60,10 @@ export default {
 	methods: {
 		// for refreshing
 		fetchMetrics() {
+			console.log('carousel fetch')
 			// specifies which metrics to fetch
 			var _params = {
-				public: 1,
-				internal: 0,
-				stat: 0,
+				sitename: 'landingPage',
 				status: 'deployed',
 				type: '',
 				master: ''
@@ -71,18 +71,6 @@ export default {
 			// call fetch on Store
 			this.$store.dispatch('fetchMetrics', _params)
 		},
-		// used for backing up the layout -- ugly / hard to follow
-		/*saveLayout(key, value) {
-			try {
-				var _config = {}
-				if (localStorage.getItem('l3')) _config = JSON.parse(localStorage.getItem('l3'))
-				_config[key] = value
-				localStorage.setItem('l3', JSON.stringify(_config))
-				Materialize.toast('Saved!', 2000)
-			} catch(e) {
-				console.log(e)
-			}
-		},*/
 		reset() {
 			localStorage.removeItem('l3')
 			location.reload()

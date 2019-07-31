@@ -89,13 +89,13 @@
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2">{{ metric.realtimeshortname }}</td>
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="department == 'All Departments'">{{ metric.Department }}</td>
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="!isStats">{{ metric.metricgoal }}</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!(metric.metricisstat)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.CurrentValue, metric) }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="(!(metric.metricisstat)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.WeeklyValue, metric) }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="(!(metric.metricisstat)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.MonthlyValue, metric) }}
 						</td>
 						<td class="center-align grey-text text-darken-2" v-if="admin">
@@ -308,10 +308,21 @@ export default {
 		},
 
 		gotoMetric(metric) {
-			var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1
 			var dept = metric.Department.toLowerCase().replace(/ /g, '')
-			// go to the details page
-			this.$router.push({ path: '/dashboard/' + ((isStats) ? 'stats' : 'public') + '/details/'+dept+'/'+metric.psofia_recordid })//, query: { id: id }})
+
+			if(this.$route.name == 'Carousel'){
+				if(metric.metricisstat){
+					window.open('http://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
+				}
+				else{
+					window.open('http://metrics.cityoflewisville.com/d/#/dashboard/public/details/'+dept+'/'+metric.psofia_recordid, '_blank');
+				}
+			}
+			else{
+				var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1
+				// go to the details page
+				this.$router.push({ path: '/dashboard/' + ((isStats) ? 'stats' : 'public') + '/details/'+dept+'/'+metric.psofia_recordid })//, query: { id: id }})
+			}
 		},
 
 		setFilter(id, filter, attr) {

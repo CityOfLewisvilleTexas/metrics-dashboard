@@ -31,6 +31,18 @@ export default {
   computed: {
     site() {
       return this.$store.state.site
+    },
+    isLoading() {
+      return this.$store.state.isLoading
+    },
+    isRefreshing() {
+      return this.$store.state.softReloading
+    },
+    refreshedAt() {
+      return this.$store.state.fromNow
+    },
+    underLarge() {
+      return this.$store.state.underLarge
     }
   },
 
@@ -51,8 +63,6 @@ export default {
 
     goToSite() {
 
-      console.log('initial fetch')
-
       // specifies metrics to get
       var _params = {
         public: this.site == 'stats' ? 0 : 1,
@@ -64,7 +74,10 @@ export default {
       }
 
       // call fetch on Store
-      this.$store.dispatch('fetchMetrics', _params)
+      if(this.$route.fullPath.toLowerCase().indexOf('carousel') == -1){
+        console.log('initial fetch')
+        this.$store.dispatch('fetchMetrics', _params)
+      }
 
       var sitename = this.site == 'stats' ? 'stats' : location.href.indexOf('donna')!=-1 ? 'donna' : location.href.indexOf('details')!=-1 ? '' : ''
       // if (sitename != '') this.$router.push({ path: '/dashboard/'+sitename })
