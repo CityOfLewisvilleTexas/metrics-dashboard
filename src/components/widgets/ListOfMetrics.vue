@@ -32,7 +32,7 @@
 				</ul>
 			</div>
 
-			<div class="filters" v-if="!isLoading && !isStats">
+			<div class="filters" v-if="!isLoading && (!isStats || (isStats && !isCarousel))">
 				<b>Filter by: </b>
 
 				<a id="filter-button" class="dropdown-button btn" data-activates="filter-dropdown">
@@ -76,7 +76,8 @@
 					<tr>
 						<th class="grey-text">Metric</th>
 						<th class="grey-text hide-on-small-only" v-if="department == 'All Departments'">Dept</th>
-						<th class="grey-text" v-if="!isStats">Goal</th>
+						<th class="grey-text hide-on-small-only" v-if="isCarousel">Type</th>
+						<th class="grey-text" v-if="(!isStats || (isStats && !isCarousel))">Goal</th>
 						<th class="center-align grey-text">Value</th>
 						<th class="center-align grey-text hide-on-med-and-down">Weekly Avg</th>
 						<th class="center-align grey-text hide-on-small-only">Monthly Avg</th>
@@ -87,22 +88,27 @@
 				<tbody>
 					<tr v-for="metric in splitMetrics[page-1]">
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2">{{ metric.realtimeshortname }}</td>
-						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="department == 'All Departments'">{{ metric.Department }}</td>
-						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="!isStats">{{ metric.metricgoal }}</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!(metric.metricisstat)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="department == 'All Departments'">
+							{{ metric.Department }}
+						</td>
+						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="isCarousel">{{ showSitename(metric) }}</td>
+						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="(!isStats || (isStats && !isCarousel))">
+							{{ !(checkIfStat(metric)) ? metric.metricgoal : '' }}
+						</td>
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.CurrentValue, metric) }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="(!(metric.metricisstat)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.WeeklyValue, metric) }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="(!(metric.metricisstat)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.MonthlyValue, metric) }}
 						</td>
 						<td class="center-align grey-text text-darken-2" v-if="admin">
 							    <select class="browser-default" @change="setMetricLocation(metric.psofia_recordid, $event)">
 							      <option value="public" :selected="metric.metricispublic">Public</option>
 							      <option value="internal" :selected="metric.metricisinternal">Internal</option>
-							      <option value="stat" :selected="metric.metricisstat">Stat</option>
+							      <option value="stat" :selected="!(checkIfStat(metric))">Stat</option>
 							      <option value="development" :selected="metric.metricstatus == 'development'">Development</option>
 							      <option value="review" :selected="metric.metricstatus == 'review'">Review</option>
 							    </select>
@@ -250,6 +256,10 @@ export default {
 
 		isStats() {
 			return this.$store.state.site=='stats'
+		},
+
+		isCarousel() {
+			return this.$route.name == 'Carousel'
 		}
 	},
 
@@ -307,11 +317,39 @@ export default {
 				this.saveSettings.callback(this.config.compid, department)
 		},
 
+		// checks both sitename and metricisstat and metricispublic
+		checkIfStat(metric){
+			if (metric.sitename_VSVal_){
+				if(metric.sitename == 'stat'){
+					// works for only one (correct) and more than one checked, sitename takes precedence
+					if (metric.metricisstat) return true
+					else { 
+						// works for no checkboxes
+						if (!(metric.metricispublic) && !(metric.metricisinternal)) return true
+						else return false
+					}
+				}
+				else{
+					// if stat is the only one checked, assue wrong sitename, check takes precedence
+					if (metric.metricisstat && !(metric.metricispublic) && !(metric.metricisinternal)) return true
+					else return false
+				}
+			}
+			else{
+				if (metric.metricisstat && !(metric.metricispublic) && !(metric.metricisinternal)) return true
+				else return false
+			}
+		},
+		showSitename(metric){
+			if (this.checkIfStat(metric)) return 'Stat'
+			else return 'Metric'
+		},
+
 		gotoMetric(metric) {
 			var dept = metric.Department.toLowerCase().replace(/ /g, '')
 
-			if(this.$route.name == 'Carousel'){
-				if(metric.metricisstat){
+			if(this.isCarousel){
+				if(this.checkIfStat(metric)){
 					window.open('http://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
 				}
 				else{
