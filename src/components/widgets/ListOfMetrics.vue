@@ -36,7 +36,7 @@
 				<b>Filter by: </b>
 
 				<a id="filter-button" class="dropdown-button btn" data-activates="filter-dropdown">
-					{{ filter1.value == 'red' ? 'Delayed' : filter1.value == 'light-green' ? 'On track' : filter1.value == 'green' ? 'Exceeding Expectationts' : 'All' }}
+					{{ filter1.value == 'red' ? 'Delayed' : filter1.value == 'light-green' ? 'On track' : filter1.value == 'green' ? 'Exceeding Expectations' : 'All' }}
 				</a>
 				<ul id="filter-dropdown" class="dropdown-content">
 					<li>
