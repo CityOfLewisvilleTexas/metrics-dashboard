@@ -2,7 +2,7 @@
 	<div id="container">
 		<div class="navbar-fixed">
             <nav>
-				<div id="top-nav" class="nav-wrapper deep-purple darken-2 left-align">
+				<div id="top-nav" class="nav-wrapper col-purple left-align">
 				    <div class="logo"></div>
 				    <div class="brand-logo white-text text-darken-3">City of Lewisville - <small>"Admin"</small></div>
 				    <ul class="right">
@@ -190,6 +190,9 @@ export default {
 }
 .nopad {
 	padding: 0;
+}
+.col-purple {
+    background-color: #5A348D !important;
 }
 .logo {
 	width: 36px;
