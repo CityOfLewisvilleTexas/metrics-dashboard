@@ -8,7 +8,7 @@
 					class="gauge-holder">
 					gauge
 				</div>
-				<p v-else class="kpi-value center-align grey-text text-darken-3">{{ metric.prevaluetext }}{{ currentValue }}{{ metric.postvaluetext }}</p>
+				<p v-else class="kpi-value center-align grey-text text-darken-3" :style="{'font-size': determineFontSize(`${metric.prevaluetext === null ? '' : metric.prevaluetext}${currentValue}${metric.postvaluetext === null ? '' : metric.postvaluetext}`)}">{{ metric.prevaluetext }}{{ currentValue }}{{ metric.postvaluetext }}</p>
 			</div>
 		</div>
 	</div>
@@ -78,6 +78,19 @@ export default {
 	},
 
 	methods: {
+		determineFontSize(node) {
+			let len = node.length
+			console.log(node, len)
+			if(len >= 8) {
+				return '2.4vw'
+			} else if(len >= 7) {
+				return '2.8vw'
+			} else if(len >= 6) {
+				return '3vw'
+			} else if(len >= 5) {
+				return '3.6vw'
+			} else return '5rem'
+		},
 		resizer() {
 			if (!this.isDrawing) this.renderGauge()
 		},
