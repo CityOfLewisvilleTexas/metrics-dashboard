@@ -82,13 +82,13 @@ export default {
 			let len = node.length
 			console.log(node, len)
 			if(len >= 8) {
-				return '2.4vw'
+				return '2.3rem'
 			} else if(len >= 7) {
-				return '2.8vw'
+				return '2.7rem'
 			} else if(len >= 6) {
-				return '3vw'
+				return '3rem'
 			} else if(len >= 5) {
-				return '3.6vw'
+				return '3.5rem'
 			} else return '5rem'
 		},
 		resizer() {
