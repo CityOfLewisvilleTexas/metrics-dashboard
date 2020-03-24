@@ -8,7 +8,7 @@
 					class="gauge-holder">
 					gauge
 				</div>
-				<p v-else class="kpi-value center-align grey-text text-darken-3" :style="{'font-size': determineFontSize(`${metric.prevaluetext === null ? '' : metric.prevaluetext}${currentValue}${metric.postvaluetext === null ? '' : metric.postvaluetext}`)}">{{ metric.prevaluetext }}{{ currentValue }}{{ metric.postvaluetext }}</p>
+				<p v-else class="kpi-value center-align grey-text text-darken-3" :style="{'font-size': determineFontSize(`${metric.prevaluetext === null ? '' : metric.prevaluetext}${addCommas(currentValue)}${metric.postvaluetext === null ? '' : metric.postvaluetext}`)}">{{ metric.prevaluetext }}{{ addCommas(currentValue) }}{{ metric.postvaluetext }}</p>
 			</div>
 		</div>
 	</div>
@@ -91,6 +91,19 @@ export default {
 				return '3.5rem'
 			} else return '5rem'
 		},
+
+		addCommas(nStr) {
+			nStr += '';
+			var x = nStr.split('.');
+			var x1 = x[0];
+			var x2 = x.length > 1 ? '.' + x[1] : '';
+			var rgx = /(\d+)(\d{3})/;
+			while (rgx.test(x1)) {
+					x1 = x1.replace(rgx, '$1' + ',' + '$2');
+			}
+			return x1 + x2;
+		},
+
 		resizer() {
 			if (!this.isDrawing) this.renderGauge()
 		},
