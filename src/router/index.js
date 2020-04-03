@@ -8,6 +8,7 @@ import FixedDemo from '@/components/layouts/FixedDemo'
 import Donna from '@/components/layouts/Donna'
 import Admin from '@/components/layouts/Admin'
 import Demo from '@/components/layouts/Demo'
+import Carousel from '@/components/layouts/Carousel'
 
 
 Vue.use(Router)
@@ -62,6 +63,11 @@ export default new Router({
       path: '/dashboard/admin/',
       name: 'Admin',
       component: Admin
+    },
+    {
+      path: '/dashboard/carousel/',
+      name: 'Carousel',
+      component: Carousel
     },
     {
       path: '/demo',
