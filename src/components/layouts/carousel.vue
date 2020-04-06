@@ -1,5 +1,7 @@
 <template>
-    <ListOfMetrics :config="config7" />
+    <div id="carousel">
+        <ListOfMetrics :config="config7" />
+    </div>
 </template>
 
 <script>
@@ -18,3 +20,9 @@ export default {
     }
 }
 </script>
+
+<style>
+#carousel {
+    overflow-x: hidden;
+}
+</style>

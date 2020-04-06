@@ -365,7 +365,7 @@ export default {
 	height: 100%;
 	padding: 16px 24px;
 	position: relative;
-	overflow-x: scroll;
+	overflow-x: auto;
 }
 .pointy {
 	cursor: pointer;
