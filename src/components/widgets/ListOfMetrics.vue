@@ -350,10 +350,10 @@ export default {
 
 			if(this.isCarousel){
 				if(this.checkIfStat(metric)){
-					window.open('http://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
+					window.open('https://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
 				}
 				else{
-					window.open('http://metrics.cityoflewisville.com/d/#/dashboard/public/details/'+dept+'/'+metric.psofia_recordid, '_blank');
+					window.open('https://metrics.cityoflewisville.com/d/#/dashboard/public/details/'+dept+'/'+metric.psofia_recordid, '_blank');
 				}
 			}
 			else{
