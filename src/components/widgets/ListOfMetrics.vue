@@ -1,5 +1,5 @@
 <template>
-	<div :id="config.compid" class="card" :class="{ donna: $route.name == 'Donna' }">
+	<div :id="config.compid" class="card" :class="{ donna: $route.name == 'Donna', 'met-carousel': $route.name == 'Carousel' }">
 		<div class="title grey lighten-2 grey-text text-darken-1 left-align" v-if="!isLoading">
 			{{ department }}
 			<small class="grey-text">( {{ metrics.length }} )</small>
@@ -32,11 +32,11 @@
 				</ul>
 			</div>
 
-			<div class="filters" v-if="!isLoading && !isStats">
+			<div class="filters" v-if="!isLoading && (!isStats || (isStats && !isCarousel))">
 				<b>Filter by: </b>
 
 				<a id="filter-button" class="dropdown-button btn" data-activates="filter-dropdown">
-					{{ filter1.value == 'red' ? 'Delayed' : filter1.value == 'light-green' ? 'On track' : filter1.value == 'green' ? 'Exceeding Expectationts' : 'All' }}
+					{{ filter1.value == 'red' ? 'Delayed' : filter1.value == 'light-green' ? 'On track' : filter1.value == 'green' ? 'Exceeding Expectations' : 'All' }}
 				</a>
 				<ul id="filter-dropdown" class="dropdown-content">
 					<li>
@@ -75,11 +75,12 @@
 				<thead>
 					<tr>
 						<th class="grey-text">Metric</th>
-						<th class="grey-text" v-if="department == 'All Departments'">Dept</th>
-						<th class="grey-text" v-if="!isStats">Goal</th>
+						<th class="grey-text hide-on-small-only" v-if="department == 'All Departments'">Dept</th>
+						<th class="grey-text hide-on-small-only" v-if="isCarousel">Type</th>
+						<th class="grey-text" v-if="(!isStats || (isStats && !isCarousel))">Goal</th>
 						<th class="center-align grey-text">Value</th>
-						<th class="center-align grey-text">Weekly Avg</th>
-						<th class="center-align grey-text">Monthly Avg</th>
+						<th class="center-align grey-text hide-on-med-and-down">Weekly Avg</th>
+						<th class="center-align grey-text hide-on-small-only">Monthly Avg</th>
 						<th class="center-align grey-text" v-if="admin">Location</th>
 						<th class="center-align grey-text" v-if="admin">Edit</th>
 					</tr>
@@ -87,22 +88,27 @@
 				<tbody>
 					<tr v-for="metric in splitMetrics[page-1]">
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2">{{ metric.realtimeshortname }}</td>
-						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="department == 'All Departments'">{{ metric.Department }}</td>
-						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="!isStats">{{ metric.metricgoal }}</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="department == 'All Departments'">
+							{{ metric.Department }}
+						</td>
+						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="isCarousel">{{ showSitename(metric) }}</td>
+						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="(!isStats || (isStats && !isCarousel))">
+							{{ !(checkIfStat(metric)) ? metric.metricgoal : '' }}
+						</td>
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.CurrentValue, metric) }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.WeeklyValue, metric) }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
 							{{ correctValue(metric.MonthlyValue, metric) }}
 						</td>
 						<td class="center-align grey-text text-darken-2" v-if="admin">
 							    <select class="browser-default" @change="setMetricLocation(metric.psofia_recordid, $event)">
 							      <option value="public" :selected="metric.metricispublic">Public</option>
 							      <option value="internal" :selected="metric.metricisinternal">Internal</option>
-							      <option value="stat" :selected="metric.metricisstat">Stat</option>
+							      <option value="stat" :selected="!(checkIfStat(metric))">Stat</option>
 							      <option value="development" :selected="metric.metricstatus == 'development'">Development</option>
 							      <option value="review" :selected="metric.metricstatus == 'review'">Review</option>
 							    </select>
@@ -250,6 +256,10 @@ export default {
 
 		isStats() {
 			return this.$store.state.site=='stats'
+		},
+
+		isCarousel() {
+			return this.$route.name == 'Carousel'
 		}
 	},
 
@@ -307,11 +317,50 @@ export default {
 				this.saveSettings.callback(this.config.compid, department)
 		},
 
+		// checks both sitename and metricisstat and metricispublic
+		checkIfStat(metric){
+			if (metric.sitename_VSVal_){
+				if(metric.sitename == 'stat'){
+					// works for only one (correct) and more than one checked, sitename takes precedence
+					if (metric.metricisstat) return true
+					else { 
+						// works for no checkboxes
+						if (!(metric.metricispublic) && !(metric.metricisinternal)) return true
+						else return false
+					}
+				}
+				else{
+					// if stat is the only one checked, assue wrong sitename, check takes precedence
+					if (metric.metricisstat && !(metric.metricispublic) && !(metric.metricisinternal)) return true
+					else return false
+				}
+			}
+			else{
+				if (metric.metricisstat && !(metric.metricispublic) && !(metric.metricisinternal)) return true
+				else return false
+			}
+		},
+		showSitename(metric){
+			if (this.checkIfStat(metric)) return 'Stat'
+			else return 'Metric'
+		},
+
 		gotoMetric(metric) {
-			var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1
 			var dept = metric.Department.toLowerCase().replace(/ /g, '')
-			// go to the details page
-			this.$router.push({ path: '/dashboard/' + ((isStats) ? 'stats' : 'public') + '/details/'+dept+'/'+metric.psofia_recordid })//, query: { id: id }})
+
+			if(this.isCarousel){
+				if(this.checkIfStat(metric)){
+					window.open('http://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
+				}
+				else{
+					window.open('http://metrics.cityoflewisville.com/d/#/dashboard/public/details/'+dept+'/'+metric.psofia_recordid, '_blank');
+				}
+			}
+			else{
+				var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1
+				// go to the details page
+				this.$router.push({ path: '/dashboard/' + ((isStats) ? 'stats' : 'public') + '/details/'+dept+'/'+metric.psofia_recordid })//, query: { id: id }})
+			}
 		},
 
 		setFilter(id, filter, attr) {
@@ -361,11 +410,43 @@ export default {
 .donna td {
 	padding: 8px 5px;
 }
+
+.met-carousel td {
+	padding: 5px 5px;
+}
+.met-carousel .btn, .met-carousel .progress .determinate, .met-carousel .switch label input[type=checkbox]:checked + .lever:after {
+	background-color: #5A348D;
+}
+.met-carousel .title {
+	background-color: #5A348D !important;
+}
+.met-carousel li a.active {
+	background-color: #73529E !important;
+}
+.met-carousel .progress {
+	background-color: #CEC2DD;
+}
+.met-carousel .switch label input[type=checkbox]:checked + .lever{
+	background-color: #AD9AC6;
+}
+.met-carousel .pagination li.active {
+	background-color: #9FC24C;
+}
+.met-carousel .dropdown-content li > a {
+	color: #5A348D;
+}
+.met-carousel th {
+	color: #5A348D !important;
+}
+.met-carousel .title, .met-carousel .title small {
+	color: #FFF !important;
+}
+
 .background {
 	height: 100%;
 	padding: 16px 24px;
 	position: relative;
-	overflow-x: auto;
+	overflow-x: scroll;
 }
 .pointy {
 	cursor: pointer;
