@@ -2,7 +2,7 @@
 	<div id="container">
 		<div class="navbar-fixed">
             <nav>
-				<div id="top-nav" class="nav-wrapper deep-purple darken-2 left-align">
+				<div id="top-nav" class="nav-wrapper col-purple left-align">
 				    <a href="#" data-activates="slide-out" id="details-side" class="button-collapse"><i class="material-icons">menu</i></a>
 				    <div class="logo"></div>
 				    <div class="brand-logo white-text text-darken-3">City of Lewisville</div>
@@ -21,9 +21,12 @@
 				    		</select>
 				    	</li>
 				    	<li v-if="!underLarge">
-				    		<router-link class="btn amber black-text" :to="{ name: 'Default' }">
+				    		<!--<router-link class="btn amber black-text" :to="{ name: 'Default' }">
 				    			<span>dashboard</span>
-				    		</router-link>
+				    		</router-link>-->
+							<a class="btn amber black-text" :href="landingURL">
+				    			<span>dashboard</span>
+				    		</a>
 				    	</li>
 				    	<!-- <li>
 				    		<a data-position="left" data-delay="100" data-tooltip="Reset page to defaults" class="tooltipped">
@@ -85,9 +88,12 @@
 	    		</div>
 	    		<ul class="right">
 			    	<li v-if="underLarge">
-			    		<router-link class="btn amber black-text" :to="{ name: 'Default' }">
+			    		<!--<router-link class="btn amber black-text" :to="{ name: 'Default' }">
 			    			<span>dashboard</span>
-			    		</router-link>
+			    		</router-link>-->
+						<a class="btn amber black-text" :href="landingURL">
+							<span>dashboard</span>
+						</a>
 			    	</li>
 			    </ul>
 	    	</div>
@@ -133,6 +139,7 @@ export default {
 			scrolled: false,
 			working: false,
 			metricLocation: 'Public',
+			landingURL: 'http://metrics.cityoflewisville.com/',
 			extraLinks: [
 				{
 					for: 'Citywide',
@@ -273,8 +280,8 @@ export default {
 		metricLocation() {
 			var flags = []
 			if (this.metricLocation == 'Public') { this.fetchMetrics(); return }
-			else if (this.metricLocation == 'Review') flags = [0,0,0,'review','','']
-			else if (this.metricLocation == 'Development') flags = [0,0,0,'development','','']
+			else if (this.metricLocation == 'Review') flags = [0,0,0,'','review','','']
+			else if (this.metricLocation == 'Development') flags = [0,0,0,'','development','','']
 			this.setLocation(...flags)
 		},
 		editing() {
@@ -317,6 +324,15 @@ export default {
 				status: 'deployed',
 				type: '',
 				master: admin == -1 ? '' : 'all'
+			}
+
+			if (this.metricLocation != 'Public'){
+				_params.public = 0
+				_params.internal = 0
+				_params.stat = 0
+				_params.sitename = ''
+				if (this.metricLocation == 'Review') _params.deployed = 'review'
+				if (this.metricLocation == 'Development') _params.deployed = 'development'
 			}
 
 			// call fetch on Store
@@ -414,9 +430,9 @@ export default {
 		},
 
 		checkLocation() {
-			if (this.location == 'public') this.setLocation(1, 0, 0, 'deployed', '', '')
-			else if (this.location == 'internal') this.setLocation(1, 1, 0, 'deployed', '', '')
-			else if (this.location == 'stats') this.setLocation(0, 0, 1, 'deployed', '', '')
+			if (this.location == 'public') this.setLocation(1, 0, 0, 'metricPublic', 'deployed', '', '')
+			else if (this.location == 'internal') this.setLocation(1, 1, 0, 'metricInternal', 'deployed', '', '')
+			else if (this.location == 'stats') this.setLocation(0, 0, 1, 'stat', 'deployed', '', '')
 		},
 
 		setLocation(pflag, iflag, sflag, status, type, master) {
@@ -428,6 +444,7 @@ export default {
 				public: pflag,
 				internal: iflag,
 				stat: sflag,
+				sitename: sitename,
 				status: status,
 				type: type,
 				master: master
@@ -450,6 +467,9 @@ export default {
 	margin-left: 16px;
 	cursor: pointer;
 	display: inline-block;
+}
+.col-purple {
+    background-color: #5A348D !important;
 }
 .sidenav-trigger {
 	display: none;

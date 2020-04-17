@@ -50,21 +50,22 @@ export default {
     },
 
     goToSite() {
-
       console.log('initial fetch')
-
       // specifies metrics to get
       var _params = {
         public: this.site == 'stats' ? 0 : 1,
         internal: 0,
         stat: this.site == 'stats' ? 1 : 0,
+        sitename: this.site == 'stats' ? 'stat': 'metricPublic',
         status: 'deployed',
         type: '',
         master: ''
       }
 
       // call fetch on Store
-      this.$store.dispatch('fetchMetrics', _params)
+      //if(this.$route.fullPath.toLowerCase().indexOf('carousel') == -1 || this.$route.fullPath.toLowerCase().indexOf('admin') == -1){
+        this.$store.dispatch('fetchMetrics', _params)
+      //}
 
       var sitename = this.site == 'stats' ? 'stats' : location.href.indexOf('donna')!=-1 ? 'donna' : location.href.indexOf('details')!=-1 ? '' : ''
       // if (sitename != '') this.$router.push({ path: '/dashboard/'+sitename })
