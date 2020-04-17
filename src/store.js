@@ -69,7 +69,7 @@ export const store = new Vuex.Store({
 
 			function get(context, params) {
 				context.state.softReloading = true
-				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Master', {
+				axios.post('http://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Master', {
 					public: params.public,
 					internal: params.internal,
 					stat: params.stat,

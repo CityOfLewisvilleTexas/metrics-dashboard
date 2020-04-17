@@ -68,13 +68,14 @@ export default {
         public: this.site == 'stats' ? 0 : 1,
         internal: 0,
         stat: this.site == 'stats' ? 1 : 0,
+        sitename: this.site == 'stats' ? 'stat': 'metricPublic',
         status: 'deployed',
         type: '',
         master: ''
       }
 
       // call fetch on Store
-      if(this.$route.fullPath.toLowerCase().indexOf('carousel') == -1){
+      if(this.$route.fullPath.toLowerCase().indexOf('carousel') == -1 || this.$route.fullPath.toLowerCase().indexOf('admin') == -1){
         console.log('initial fetch')
         this.$store.dispatch('fetchMetrics', _params)
       }

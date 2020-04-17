@@ -280,8 +280,8 @@ export default {
 		metricLocation() {
 			var flags = []
 			if (this.metricLocation == 'Public') { this.fetchMetrics(); return }
-			else if (this.metricLocation == 'Review') flags = [0,0,0,'review','','']
-			else if (this.metricLocation == 'Development') flags = [0,0,0,'development','','']
+			else if (this.metricLocation == 'Review') flags = [0,0,0,'','review','','']
+			else if (this.metricLocation == 'Development') flags = [0,0,0,'','development','','']
 			this.setLocation(...flags)
 		},
 		editing() {
@@ -324,6 +324,15 @@ export default {
 				status: 'deployed',
 				type: '',
 				master: admin == -1 ? '' : 'all'
+			}
+
+			if (this.metricLocation != 'Public'){
+				_params.public = 0
+				_params.internal = 0
+				_params.stat = 0
+				_params.sitename = ''
+				if (this.metricLocation == 'Review') _params.deployed = 'review'
+				if (this.metricLocation == 'Development') _params.deployed = 'development'
 			}
 
 			// call fetch on Store
@@ -421,9 +430,9 @@ export default {
 		},
 
 		checkLocation() {
-			if (this.location == 'public') this.setLocation(1, 0, 0, 'deployed', '', '')
-			else if (this.location == 'internal') this.setLocation(1, 1, 0, 'deployed', '', '')
-			else if (this.location == 'stats') this.setLocation(0, 0, 1, 'deployed', '', '')
+			if (this.location == 'public') this.setLocation(1, 0, 0, 'metricPublic', 'deployed', '', '')
+			else if (this.location == 'internal') this.setLocation(1, 1, 0, 'metricInternal', 'deployed', '', '')
+			else if (this.location == 'stats') this.setLocation(0, 0, 1, 'stat', 'deployed', '', '')
 		},
 
 		setLocation(pflag, iflag, sflag, status, type, master) {
@@ -435,6 +444,7 @@ export default {
 				public: pflag,
 				internal: iflag,
 				stat: sflag,
+				sitename: sitename,
 				status: status,
 				type: type,
 				master: master
