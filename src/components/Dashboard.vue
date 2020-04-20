@@ -62,7 +62,7 @@ export default {
       }
 
       // call fetch on Store, exclude carousel page
-      if(this.$route.fullPath.indexOf('carousel') == -1){   // && this.$route.fullPath.indexOf('admin') == -1 /* clarson - I don't remember why this was included */
+      if(this.$route.fullPath.indexOf('carousel') == -1 && this.$route.fullPath.indexOf('admin') == -1){  /* clarson - include admin? */
         console.log('initial fetch')
         this.$store.dispatch('fetchMetrics', _params)
       }
