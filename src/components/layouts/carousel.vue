@@ -1,11 +1,11 @@
 <template>
 	<div>
-		<div class="spinner" v-if="isLoading">
+		<div class="spinner" v-if="isLoading || isRefreshing">
 			<div class="double-bounce1"></div>
 			<div class="double-bounce2"></div>
 		</div>
 		<transition appear name="fade">
-			<main v-if="!isLoading">
+			<main v-if="!isLoading && !isRefreshing">
 				<div class="row">
 					<div class="col s12">
 						<ListOfMetrics :config="config7"/>

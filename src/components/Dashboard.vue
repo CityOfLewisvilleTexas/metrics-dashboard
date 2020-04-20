@@ -50,7 +50,6 @@ export default {
     },
 
     goToSite() {
-      console.log('initial fetch')
       // specifies metrics to get
       var _params = {
         public: this.site == 'stats' ? 0 : 1,
@@ -62,10 +61,11 @@ export default {
         master: ''
       }
 
-      // call fetch on Store
-      //if(this.$route.fullPath.toLowerCase().indexOf('carousel') == -1 || this.$route.fullPath.toLowerCase().indexOf('admin') == -1){
+      // call fetch on Store, exclude carousel page
+      if(this.$route.fullPath.indexOf('carousel') == -1){   // && this.$route.fullPath.indexOf('admin') == -1 /* clarson - I don't remember why this was included */
+        console.log('initial fetch')
         this.$store.dispatch('fetchMetrics', _params)
-      //}
+      }
 
       var sitename = this.site == 'stats' ? 'stats' : location.href.indexOf('donna')!=-1 ? 'donna' : location.href.indexOf('details')!=-1 ? '' : ''
       // if (sitename != '') this.$router.push({ path: '/dashboard/'+sitename })

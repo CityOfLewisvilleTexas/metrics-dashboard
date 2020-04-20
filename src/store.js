@@ -73,6 +73,7 @@ export const store = new Vuex.Store({
 					public: params.public,
 					internal: params.internal,
 					stat: params.stat,
+					sitename: params.sitename,
 					status: params.status,
 					type: params.type,
 					master: params.master
