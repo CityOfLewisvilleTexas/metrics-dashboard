@@ -13,6 +13,7 @@ export const store = new Vuex.Store({
 	// usage: this.$store.state.stateName
 	state: {
 		metrics: [],
+		stats: [],
 		departments: [],
 		bigmoves: [],
 		citypriorities: [],
@@ -44,6 +45,9 @@ export const store = new Vuex.Store({
 			state.refreshedInterval = setInterval(() => {
 				state.fromNow = Moment(state.lastRefreshed).fromNow()
 			}, 10000)
+		},
+		storeStats(state, payload) {
+			state.stats = payload.metrics
 		},
 		clearMetrics(state) {
 			state.metrics = []
@@ -92,6 +96,30 @@ export const store = new Vuex.Store({
 			context.state.interval = setInterval(() => {
 				get(context, params)
 			}, 300000)// 60000*5)
+		},
+		fetchStats(_context, params) {
+
+			function get(context, params) {
+				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Master', {
+					public: params.public,
+					internal: params.internal,
+					stat: params.stat,
+					status: params.status,
+					type: params.type,
+					master: params.master
+				})
+				.then(_results => {
+					_context.commit('storeStats', _results.data)
+					return new Promise((resolve) => {
+						resolve();
+					})
+				})
+				.catch(error => {
+					console.log(error)
+				})
+			}
+
+			get(_context, params)
 		}
 	},
 	// similar to 'computed' values
