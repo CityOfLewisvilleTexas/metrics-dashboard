@@ -7,6 +7,9 @@
 				    <div class="logo"></div>
 				    <div class="brand-logo white-text text-darken-3">City of Lewisville</div>
 				    <ul class="right">
+						<li v-if="filteredStats.length > 0">
+							<a href="#stats_carousel"> stats</a>
+						</li>
 				    	<li v-if="editing">
 				    		<!-- <a class="btn amber black-text" @click="setWorking(1)" v-if="!working">
 				    			working
@@ -109,6 +112,18 @@
 	    				<MetricCard :metric="metric" :editing="editing" />
 	    			</li>
 	    		</ul>
+
+				<div class="divider"></div>
+				<H2 v-if="filteredStats.length > 0">Stats</H2>
+				<div  v-if="filteredStats.length > 0" class="row" shortcut>
+					<!-- <div class="col s12 l6 xl4 nopad">
+					</div> -->
+					<div class="col s12 l12 xl10 offset-xl1 grid" id="g6">
+						<ListOfMetrics id="stats_carousel" :config="config6" :department="currentCat.display" />
+						<!-- :saveSettings="saveSettings" -->
+					</div>
+				</div>
+
 			</div>
 		</main>
 	</div>
@@ -164,7 +179,13 @@ export default {
 					text: 'PEP Awards Dashboard',
 					link : 'http://eservices.cityoflewisville.com/pepawards/'
 				}
-			]
+			],
+			config6: {
+				compid: 'g6-list',
+				editable: false,
+				department: this.department ? this.department : 'All Departments',
+				stats: true
+			}
 		}
 	},
 
@@ -199,6 +220,17 @@ export default {
 			})
 		},
 
+		stats() {
+			return this.$store.state.stats.sort((a,b) => {
+				if (a.metrictype == b.metrictype) {
+					return (a.realtimeshortname < b.realtimeshortname) ? -1 : (a.realtimeshortname > b.realtimeshortname) ? 1 : 0
+				}
+				else {
+					return (a.metrictype < b.metrictype) ? -1 : 1
+				}
+			})
+		},
+
 		filteredMetrics() {
 			if (this.currentCat.id == 'all')
 				return this.metrics
@@ -206,6 +238,15 @@ export default {
 				return metric.category1 == this.currentCat.id || metric.cateogry3 == this.currentCat.id || metric.category2 == this.currentCat.id
 			})
 		},
+
+		filteredStats() {
+			if (this.currentCat.id == 'all')
+				return this.stats
+			return this.stats.filter(metric => {
+				return metric.category1 == this.currentCat.id || metric.cateogry3 == this.currentCat.id || metric.category2 == this.currentCat.id
+			})
+		},
+
 
 		departments() {
 			return this.$store.state.departments.sort((a,b) => {
@@ -321,6 +362,15 @@ export default {
 
 			// call fetch on Store
 			this.$store.dispatch('fetchMetrics', _params)
+			this.$store.dispatch('fetchStats', {
+				public: 0,
+				internal: 0,
+				stat: 1,
+				status: 'deployed',
+				type: '',
+				master: admin == -1 ? '' : 'all'
+			}).then(res => this.$store.state.stats)
+			
 		},
 
 		checkMetricsForRouteId() {

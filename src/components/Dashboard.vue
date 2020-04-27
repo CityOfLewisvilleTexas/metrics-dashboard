@@ -65,6 +65,7 @@ export default {
 
       // call fetch on Store
       this.$store.dispatch('fetchMetrics', _params)
+      this.$store.dispatch('fetchStats', {public: 1, internal: 0, stat: 1, status: 'deployed', type: '', master: ''})
 
       var sitename = this.site == 'stats' ? 'stats' : location.href.indexOf('donna')!=-1 ? 'donna' : location.href.indexOf('details')!=-1 ? '' : ''
       // if (sitename != '') this.$router.push({ path: '/dashboard/'+sitename })

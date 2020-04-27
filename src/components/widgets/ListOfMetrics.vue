@@ -123,7 +123,7 @@
 					</tr>
 				</tbody>
 			</table>
-			<div class="page-system left-align">
+			<div class="page-system left-align" v-if="splitMetrics.length > 1">
 				<ul class="pagination" v-if="!isLoading">
 				    <li class="pointy" :class="{ disabled : page == 1 }" @click="setPage(page == 1 ? page : page-1, true)">
 				    	<a><i class="material-icons">chevron_left</i></a>
@@ -162,10 +162,19 @@ export default {
 	components: {
 		ListOfDepartmentsButton
 	},
-	props: ['saveSettings','admin', 'config'],
+	props: //['saveSettings','admin', 'config'],
+		{
+			saveSettings: Object,
+			admin: Boolean,
+			config: Object,
+			department: {
+				type: String,
+				default: 'All Departments'
+			}
+		},
 	data () {
 		return {
-			department: 'All Departments',
+			//department: 'All Departments',
 			sorter: {
 				by: this.$route.name == 'Donna' ? 'CurrentColor' : 'realtimeshortname',
 				order: this.$route.name == 'Donna' ? 1 : -1,
@@ -192,7 +201,8 @@ export default {
 
 	computed: {
 		metrics() {
-			return this.$store.state.metrics
+			if (this.config.stats) {
+				return this.$store.state.stats
 				.filter(metric => {
 					var keep = true
 					keep = metric.metrictype == 'Query'
@@ -221,6 +231,38 @@ export default {
 						return 0
 					}
 				})
+			} else {
+				return this.$store.state.metrics
+				.filter(metric => {
+					var keep = true
+					keep = metric.metrictype == 'Query'
+					if (!keep) return false
+					if (this.filter1.attr)
+						keep = metric[this.filter1.attr] == this.filter1.value
+					if (!keep) return false
+					if (this.filter2.attr)
+						keep = metric[this.filter2.attr] == this.filter2.value
+					if (!keep) return false
+					if (this.filter3.attr)
+					keep = metric[this.filter3.attr] == this.filter3.value
+					if (!keep) return false
+					if (this.department != 'All Departments')
+						keep = metric.Department == this.department
+					if (!keep) return false
+					return keep
+				})
+				.sort((a,b) => {
+					// if (!this.config.sortBy) return
+					if (a[this.sorter.by] < b[this.sorter.by]) return (this.sorter.order)
+					if (a[this.sorter.by] > b[this.sorter.by]) return (this.sorter.order*-1)
+					else {
+						if (a.realtimeshortname.toLowerCase().replace(/ /g, '') < b.realtimeshortname.toLowerCase().replace(/ /g, '')) return -1
+						if (a.realtimeshortname.toLowerCase().replace(/ /g, '') > b.realtimeshortname.toLowerCase().replace(/ /g, '')) return 1
+						return 0
+					}
+				})
+			}
+			
 		},
 
 		splitMetrics() {
@@ -357,7 +399,7 @@ export default {
 				}
 			}
 			else{
-				var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1
+				var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1 || this.config.stats
 				// go to the details page
 				this.$router.push({ path: '/dashboard/' + ((isStats) ? 'stats' : 'public') + '/details/'+dept+'/'+metric.psofia_recordid })//, query: { id: id }})
 			}
