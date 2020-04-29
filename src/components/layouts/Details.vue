@@ -8,7 +8,7 @@
 				    <div class="brand-logo white-text text-darken-3">City of Lewisville</div>
 				    <ul class="right">
 						<li v-if="filteredStats.length > 0">
-							<a v-bind:href="'http://metrics.cityoflewisville.com/d/#' + $route.path + '#stats_carousel'"> stats</a>
+							<a href="#stats_carousel"> stats</a>
 						</li>
 				    	<li v-if="editing">
 				    		<!-- <a class="btn amber black-text" @click="setWorking(1)" v-if="!working">
@@ -119,9 +119,9 @@
 	    			</li>
 	    		</ul>
 
-				<div class="divider"></div>
-				<H2 v-if="filteredStats.length > 0">Stats</H2>
-				<div  v-if="filteredStats.length > 0" class="row" shortcut>
+				<div class="divider" v-if="!isStats"></div>
+				<H2 v-if="filteredStats.length > 0 && !isStats">Stats</H2>
+				<div  v-if="filteredStats.length > 0 && !isStats" class="row" shortcut>
 					<!-- <div class="col s12 l6 xl4 nopad">
 					</div> -->
 					<div class="col s12 l12 xl10 offset-xl1 grid" id="g6">
