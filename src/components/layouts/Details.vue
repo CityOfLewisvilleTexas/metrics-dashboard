@@ -363,6 +363,7 @@ export default {
 				public: isStats ? 0 : 1,
 				internal: 0,
 				stat: isStats ? 1 : 0,
+				sitename: '',
 				status: 'deployed',
 				type: '',
 				master: admin == -1 ? '' : 'all'
@@ -486,7 +487,7 @@ export default {
 			else if (this.location == 'stats') this.setLocation(0, 0, 1, 'stat', 'deployed', '', '')
 		},
 
-		setLocation(pflag, iflag, sflag, status, type, master) {
+		setLocation(pflag, iflag, sflag, sitename, status, type, master) {
 			this.working = true
 			this.$store.commit('clearMetrics')
 
