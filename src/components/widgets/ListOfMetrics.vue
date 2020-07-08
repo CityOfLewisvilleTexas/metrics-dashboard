@@ -392,7 +392,7 @@ export default {
 
 			if(this.isCarousel){
 				if(this.checkIfStat(metric)){
-					window.open('https://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
+					window.open('http://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
 				}
 				else{
 					window.open('https://metrics.cityoflewisville.com/d/#/dashboard/public/details/'+dept+'/'+metric.psofia_recordid, '_blank');

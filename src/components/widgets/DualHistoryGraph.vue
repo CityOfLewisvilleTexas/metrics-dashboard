@@ -93,7 +93,7 @@ export default {
 				this.isLoading = true
 
 				// fetch
-				axios.post('http://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Details or History', {
+				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Details or History', {
 					// webservice: 'Performance Measures/Get Details or History',
 					uspName: this.config.uspName,
 					DetOrAvg: 'AGG'
@@ -125,7 +125,7 @@ export default {
 				this.isLoading = true
 
 				// fetch
-				axios.post('http://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Details or History', {
+				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Details or History', {
 					// webservice: 'Performance Measures/Get Details or History',
 					uspName: this.config.uspName2,
 					DetOrAvg: 'AGG'

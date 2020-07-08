@@ -154,7 +154,7 @@ export default {
 			scrolled: false,
 			working: false,
 			metricLocation: 'Public',
-			landingURL: 'http://metrics.cityoflewisville.com/',
+			landingURL: 'https://metrics.cityoflewisville.com/',
 			extraLinks: [
 				{
 					for: 'Citywide',

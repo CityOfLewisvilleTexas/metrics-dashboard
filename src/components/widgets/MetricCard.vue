@@ -212,7 +212,7 @@ export default {
 		},
 
 		edit(metric) {
-			window.open('http://eservices.cityoflewisville.com/psofia/node/index.html?form=42&recordnumber=' + metric.psofia_recordid)
+			window.open('https://eservices.cityoflewisville.com/psofia/node/index.html?form=42&recordnumber=' + metric.psofia_recordid)
 		}
 	}
 }
