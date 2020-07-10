@@ -43,38 +43,22 @@ export default {
 		refreshedAt() {
 			return this.$store.state.fromNow
 		},
-		underLarge() {
-			return this.$store.state.underLarge
-		}
 	},
 	watch: {
 	},
 	// START HERE
 	mounted() {
-		//this.$store.commit('setSite', 'metrics')
-		if(this.$store.state.metrics.length == 0) this.fetchMetrics()
+		this.fetchMetrics()
 	},
 	// called as component is removed
 	beforeDestroy() {
 	},
 	methods: {
-		// for refreshing
 		fetchMetrics() {
-			console.log('carousel fetch')
-			// specifies which metrics to fetch
-			var _params = {
-				sitename: 'landingPage',
-				status: 'deployed',
-				type: '',
-				master: ''
-			}
+			console.log('carousel - fetch')
 			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
+			this.$store.dispatch('fetchCarouselMetrics')
 		},
-		reset() {
-			localStorage.removeItem('l3')
-			location.reload()
-		}
 	}
 }
 </script>

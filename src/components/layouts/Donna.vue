@@ -11,7 +11,7 @@
 				    	</li>
 				    	<li>
 				    		<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
-				    			<i class="material-icons" :class="{ active : $store.state.softReloading }">refresh</i>
+				    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
 				    		</a>
 				    	</li>
 				    </ul>
@@ -80,28 +80,19 @@
 <script>
 import Moment from 'moment'
 import GoalsPie2 from '../widgets/GoalsPie2'
-import MetricsByDeptBarChart from '../widgets/MetricsByDeptBarChart'
-import FixedNavBar from '../widgets/FixedNavBar'
-import HistoryGraph2 from '../widgets/HistoryGraph2'
-import DualHistoryGraph2 from '../widgets/DualHistoryGraph2'
 import ListOfMetrics from '../widgets/ListOfMetrics'
 import KPI from '../widgets/KPI'
 import SearchMetricsBar from '../widgets/SearchMetricsBar'
-import MetricCard from '../widgets/MetricCard'
-import ESRIMap from '../widgets/ESRIMap'
-import GoogleMap from '../widgets/GoogleMap'
-import TextBox from '../widgets/TextBox'
 export default {
 	name: 'Donna',
 	components: {
-		GoalsPie2, MetricsByDeptBarChart, FixedNavBar, HistoryGraph2, DualHistoryGraph2, ListOfMetrics, KPI, SearchMetricsBar, MetricCard, ESRIMap, GoogleMap, TextBox
+		GoalsPie2, ListOfMetrics, KPI, SearchMetricsBar
 	},
 	props: [],
 	data () {
 		return {
 			id: 'l3',
 			searchTerm: '',
-			underLarge: false,
 			saveSettings: {
 				callback: this.saveLayout,
 				localStorageKey: 'l3'
@@ -200,44 +191,27 @@ export default {
 		},
 		refreshedAt() {
 			return this.$store.state.fromNow
-		}
+		},
+		underLarge() {
+			return this.$store.state.underLarge
+		},
 	},
 
 	watch: {
 	},
 
 	mounted() {
-		this.$store.commit('setSite', 'metrics')
-		this.setSize()
-		$(window).resize(this.setSize)
 	},
 
 	beforeDestroy() {
-		$(window).off('resize')
 	},
 
 	methods: {
 
-		// for repositioning the search bar as needed
-		setSize() {
-			this.underLarge = ($(window).width() < 1200) ? true : false
-		},
-
 		// uses store to fetch metrics
 		fetchMetrics() {
-
-			// specifies which metrics to fetch
-			var _params = {
-				public: 1,
-				internal: 0,
-				stat: 0,
-				status: 'deployed',
-				type: '',
-				master: ''
-			}
-
-			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
+			console.log('Donna - fetch metrics')
+			this.$store.dispatch('fetchPerfMeasures')
 		},
 
 		// used for backing up the layout -- ugly / hard to follow

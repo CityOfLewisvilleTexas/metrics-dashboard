@@ -3,7 +3,7 @@
 		<div class="white">
 			<div class="loader" v-if="isLoading"></div>
 			<div v-if="!isLoading">
-				<div :id="'metric-gauge-' + metric.psofia_recordid"
+				<div :id="'metric-gauge-' + metricID"
 					v-if="(metric.gaugedataformat == 'PERCENT' && metric.metrictype == 'Query') || (metric.metrictype == 'Static' && metric.staticsymbol == 'Gauge')"
 					class="gauge-holder">
 					gauge
@@ -20,7 +20,12 @@ export default {
 	name: 'MetricCardValue',
 	components: {
 	},
-	props: ['metric'],
+	props:{
+		metric:{
+			type: Object,
+			required: true,
+		},
+	},
 	data () {
 		return {
 			chartdata: {},
@@ -30,8 +35,19 @@ export default {
 	},
 
 	computed: {
-		currentValue() {
+		primaryKey() {
+			return this.$store.getters.primaryKey
+		},
+		metricID(){
+			return this.metric[this.primaryKey];
+		},
+		// loading icon if store hasnt loaded yet (no current metric loaded)
+		isLoading() {
+			if (!this.metric) return true
+			return this.metric.hasOwnProperty(this.primaryKey) ? false : true
+		},
 
+		currentValue() {
 			var decPlaces = this.metric.decimalplaces == null ? 2 : this.metric.decimalplaces
 
 			if (this.metric.metrictype == 'Static') {
@@ -45,12 +61,6 @@ export default {
 			}
 			else return '[[error 1000]]'
 		},
-
-		// loading icon if store hasnt loaded yet (no current metric loaded)
-		isLoading() {
-			if (!this.metric) return true
-			return this.metric.hasOwnProperty('psofia_recordid') ? false : true
-		}
 	},
 
 	watch: {
@@ -159,7 +169,7 @@ export default {
 		},
 
 		renderGauge() {
-			var chart = new google.visualization.Gauge(document.getElementById('metric-gauge-'+this.metric.psofia_recordid))
+			var chart = new google.visualization.Gauge(document.getElementById('metric-gauge-' + this.metricID))
 			chart.draw(this.chartdata, this.chartoptions)
 			this.isDrawing = false
 		}

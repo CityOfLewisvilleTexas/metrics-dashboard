@@ -7,8 +7,8 @@
 				    <div class="logo"></div>
 				    <div class="brand-logo white-text text-darken-3">City of Lewisville</div>
 				    <ul class="right">
-						<li v-if="filteredStats.length > 0">
-							<a href="#stats_carousel"> stats</a>
+						<li v-if="showStatsCarousel">
+							<a href="#stats_carousel"> Stats</a>
 						</li>
 				    	<li v-if="editing">
 				    		<!-- <a class="btn amber black-text" @click="setWorking(1)" v-if="!working">
@@ -17,7 +17,7 @@
 				    		<a class="btn amber black-text" @click="setWorking(0)" v-else>
 				    			normal
 				    		</a> -->
-				    		<select class="browser-default" v-model="metricLocation">
+				    		<select class="browser-default" v-model="metricStatus">
 				    			<option>Public</option>
 				    			<option>Review</option>
 				    			<option>Development</option>
@@ -38,7 +38,7 @@
 				    	</li> -->
 				    	<li>
 				    		<a @click="fetchMetrics(true)">
-				    			<i class="material-icons" :class="{ active : $store.state.isLoading }">refresh</i>
+				    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
 				    		</a>
 				    	</li>
 				    </ul>
@@ -119,14 +119,11 @@
 	    			</li>
 	    		</ul>
 
-				<div class="divider" v-if="!isStats"></div>
-				<H2 v-if="filteredStats.length > 0 && !isStats">Stats</H2>
-				<div  v-if="filteredStats.length > 0 && !isStats" class="row" shortcut>
-					<!-- <div class="col s12 l6 xl4 nopad">
-					</div> -->
+				<div class="divider" v-if="showStatsCarousel"></div>
+				<h2 v-if="showStatsCarousel">Stats</h2>
+				<div  v-if="showStatsCarousel" class="row" shortcut>
 					<div class="col s12 l12 xl10 offset-xl1 grid" id="g6">
 						<ListOfMetrics id="stats_carousel" :config="config6" :department="currentCat.display" />
-						<!-- :saveSettings="saveSettings" -->
 					</div>
 				</div>
 
@@ -137,23 +134,20 @@
 
 <script>
 import Vue from 'vue'
-import FixedNavBar from '../widgets/FixedNavBar'
-import HistoryGraph from '../widgets/HistoryGraph'
 import ListOfMetrics from '../widgets/ListOfMetrics'
-import KPI from '../widgets/KPI'
 import SearchMetricsBar from '../widgets/SearchMetricsBar'
 import MetricCard from '../widgets/MetricCard'
 export default {
 	name: 'Details',
 	components: {
-		FixedNavBar, HistoryGraph, ListOfMetrics, KPI, SearchMetricsBar, MetricCard
+		ListOfMetrics, SearchMetricsBar, MetricCard
 	},
 	props: [],
 	data () {
 		return {
 			scrolled: false,
 			working: false,
-			metricLocation: 'Public',
+			metricStatus: 'Public',
 			landingURL: 'https://metrics.cityoflewisville.com/',
 			extraLinks: [
 				{
@@ -187,35 +181,39 @@ export default {
 					link : 'http://eservices.cityoflewisville.com/pepawards/'
 				}
 			],
-			config6: {
-				compid: 'g6-list',
-				editable: false,
-				department: this.department ? this.department : 'All Departments',
-				stats: true
-			}
 		}
 	},
 
 	computed: {
+		isLoading() {
+			return this.$store.state.isLoading
+		},
+		isRefreshing() {
+			return this.$store.state.softReloading
+		},
 		underLarge() {
 			return this.$store.state.underLarge
 		},
+		isStats() {
+			return this.$store.getters.isStats
+		},
+		siteFilters() {
+			return this.$store.state.siteFilters
+		},
+		primaryKey() {
+			return this.$store.getters.primaryKey
+		},
+		showStatsCarousel(){
+			return !this.isStats && this.metricStatus == 'Public' && this.filteredStats.length > 0;
+		},
+
 		extraLink() {
 			for (var link of this.extraLinks) {
 				if (link.for == this.currentCat.display) return link
 			}
 			return null
 		},
-		isLoading() {
-			return this.$store.state.isLoading
-		},
-		isStats() {
-			return this.$route.fullPath.indexOf('stats') != -1
-		},
-		location() {
-			console.log(this.$route)
-			return this.$route.params.location
-		},
+
 		// sort by query -> static, then alphabetical by name
 		metrics() {
 			return this.$store.state.metrics.sort((a,b) => {
@@ -227,7 +225,6 @@ export default {
 				}
 			})
 		},
-
 		stats() {
 			return this.$store.state.stats.sort((a,b) => {
 				if (a.metrictype == b.metrictype) {
@@ -246,7 +243,6 @@ export default {
 				return metric.category1 == this.currentCat.id || metric.cateogry3 == this.currentCat.id || metric.category2 == this.currentCat.id
 			})
 		},
-
 		filteredStats() {
 			if (this.currentCat.id == 'all')
 				return this.stats
@@ -263,7 +259,6 @@ export default {
 				return 0
 			})
 		},
-
 		citypriorities() {
 			return this.$store.state.citypriorities.sort((a,b) => {
 				if (a.bmpdisplayname < b.bmpdisplayname) return -1
@@ -271,7 +266,6 @@ export default {
 				return 0
 			})
 		},
-
 		bigmoves() {
 			return this.$store.state.bigmoves.sort((a,b) => {
 				if (a.bmpdisplayname < b.bmpdisplayname) return -1
@@ -303,8 +297,17 @@ export default {
 			}
 		},
 
+		config6() {
+			return {
+				compid: 'g6-list',
+				editable: false,
+				department: this.currentCat ? this.currentCat.display : 'All Departments',
+				stats: true
+			}
+		},
+
 		editing() {
-			return (this.$route.params.id == 'edit' || this.$route.params.edit == 'edit')// || localStorage.colAuthToken)
+			return (this.$route.params.id == 'edit' || this.$route.params.edit == 'edit')
 		}
 	},
 
@@ -312,24 +315,24 @@ export default {
 		metrics() {
 			if (!this.scrolled) Vue.nextTick(this.checkMetricsForRouteId)
 		},
-		location() {
-			this.checkLocation()
-		},
 		'$route' (to, from) {
 			$('html, body').scrollTop(0)
 			this.checkMetricsForRouteId()
 		},
-		metricLocation() {
-			var flags = []
-			if (this.metricLocation == 'Public') { this.fetchMetrics(); return }
-			else if (this.metricLocation == 'Review') flags = [0,0,0,'','review','','']
-			else if (this.metricLocation == 'Development') flags = [0,0,0,'','development','','']
-			this.setLocation(...flags)
+		metricStatus() {
+			var payload = {status: ''};
+			if (this.metricStatus == 'Public') payload.status = 'deployed'
+			else if (this.metricStatus == 'Review') payload.status = 'review'
+			else if (this.metricStatus == 'Development') payload.status = 'development'
+			if(payload.status != this.siteFilters.status){
+				this.$store.commit('setSiteFilters', payload);
+				this.$store.commit('clearMetrics')
+			}
 		},
 		editing() {
 			if (!this.editing) {
-				this.fetchMetrics()
-				this.metricLocation = 'Public'
+				//this.fetchMetrics()
+				this.metricStatus = 'Public'
 			}
 			else {
 				authenticate()
@@ -340,7 +343,8 @@ export default {
 	mounted() {
 		$("#details-side").sideNav();
 		if (this.editing) authenticate()
-		if (this.$store.state.metrics.length == 0) this.fetchMetrics()
+		//if (!this.isLoading && this.$store.state.metrics.length == 0) this.fetchMetrics()
+		if (this.metricStatus == 'Public' && this.$store.state.stats.length == 0) this.fetchStats();
 		Vue.nextTick(this.checkMetricsForRouteId)
 	},
 
@@ -348,47 +352,18 @@ export default {
 
 		// uses store to fetch metrics
 		fetchMetrics(clicked) {
-
+			console.log('Details - fetch metrics')
 			if (clicked == true) this.scrolled = false
 
 			this.$store.commit('clearMetrics')
 
-			// admin
-			var admin = this.$route.fullPath.toLowerCase().indexOf('admin')
-
-			var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1
-
-			// specifies which metrics to fetch
-			var _params = {
-				public: isStats ? 0 : 1,
-				internal: 0,
-				stat: isStats ? 1 : 0,
-				sitename: '',
-				status: 'deployed',
-				type: '',
-				master: admin == -1 ? '' : 'all'
-			}
-
-			if (this.metricLocation != 'Public'){
-				_params.public = 0
-				_params.internal = 0
-				_params.stat = 0
-				_params.sitename = ''
-				if (this.metricLocation == 'Review') _params.deployed = 'review'
-				if (this.metricLocation == 'Development') _params.deployed = 'development'
-			}
-
 			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
-			this.$store.dispatch('fetchStats', {
-				public: 0,
-				internal: 0,
-				stat: 1,
-				status: 'deployed',
-				type: '',
-				master: admin == -1 ? '' : 'all'
-			}).then(res => this.$store.state.stats)
-			
+			this.$store.dispatch('fetchPerfMeasures')
+			this.fetchStats();
+		},
+		fetchStats(){
+			console.log('Details - fetch stats')
+			this.$store.dispatch('fetchCarouselStats')
 		},
 
 		checkMetricsForRouteId() {
@@ -397,7 +372,7 @@ export default {
 				return
 			}
 			for (var i in this.filteredMetrics) {
-				if (this.filteredMetrics[i].psofia_recordid == this.$route.params.id) {
+				if (this.filteredMetrics[i][this.primaryKey] == this.$route.params.id) {
 					this.scrollToMetric('#metric-card-' + this.$route.params.id)
 				}
 			}
@@ -480,35 +455,6 @@ export default {
 			})
 			return sum
 		},
-
-		checkLocation() {
-			if (this.location == 'public') this.setLocation(1, 0, 0, 'metricPublic', 'deployed', '', '')
-			else if (this.location == 'internal') this.setLocation(1, 1, 0, 'metricInternal', 'deployed', '', '')
-			else if (this.location == 'stats') this.setLocation(0, 0, 1, 'stat', 'deployed', '', '')
-		},
-
-		setLocation(pflag, iflag, sflag, sitename, status, type, master) {
-			this.working = true
-			this.$store.commit('clearMetrics')
-
-			// specifies which metrics to fetch
-			var _params = {
-				public: pflag,
-				internal: iflag,
-				stat: sflag,
-				sitename: sitename,
-				status: status,
-				type: type,
-				master: master
-			}
-
-			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
-
-			// // change url accordingly
-			// if (iflag) this.$route.params.location = 'internal'
-			// else if (pflag) this.$route.params.location = 'public'
-		}
 	}
 }
 </script>

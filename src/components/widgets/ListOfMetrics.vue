@@ -200,6 +200,20 @@ export default {
 	},
 
 	computed: {
+		isLoading() {
+			return this.$store.state.isLoading
+		},
+		isRefreshing() {
+			return this.$store.state.softReloading
+		},
+
+		isStats() {
+			return this.$store.getters.isStats
+		},
+		isCarousel() {
+			return this.$route.name == 'Carousel'
+		},
+		
 		metrics() {
 			if (this.config.stats) {
 				return this.$store.state.stats
@@ -291,18 +305,6 @@ export default {
 				return 0
 			})
 		},
-
-		isLoading() {
-			return this.$store.state.isLoading
-		},
-
-		isStats() {
-			return this.$store.state.site=='stats'
-		},
-
-		isCarousel() {
-			return this.$route.name == 'Carousel'
-		}
 	},
 
 	watch: {
@@ -361,7 +363,7 @@ export default {
 
 		// checks both sitename and metricisstat and metricispublic
 		checkIfStat(metric){
-			if (metric.sitename_VSVal_){
+			if (metric.sitename){
 				if(metric.sitename == 'stat'){
 					// works for only one (correct) and more than one checked, sitename takes precedence
 					if (metric.metricisstat) return true

@@ -9,7 +9,6 @@
 			<div class="modal-content">
 				<p class="flow-text">{{ metric.metricname }}</p>
 				<div class="history-graph-holder">
-					<!-- <HistoryGraph2 :config="config" v-if="isVisible" /> -->
 					<canvas :id="'cvs-' + metric.psofia_recordid" class="cvs" />
 				</div>
 			</div>
@@ -24,27 +23,34 @@
 import Vue from 'vue'
 import axios from 'axios'
 import moment from 'moment'
-import ListOfMetricsButton from '../widgets/ListOfMetricsButton'
-import HistoryGraph2 from '../widgets/HistoryGraph2'
 import Chart from 'chart.js'
 export default {
 	name: 'HistoryButton',
 	components: {
-		ListOfMetricsButton, HistoryGraph2
 	},
-	props: ['metric'],
+	props:{
+		metric:{
+			type: Object,
+			required: true,
+		},
+	},
 	data () {
 		return {
 			chartdata: [],
-			isVisible: false,
 			isLoading: true // loading just this history data,
 		}
 	},
 
 	computed: {
+		primaryKey() {
+			return this.$store.getters.primaryKey
+		},
+		metricID(){
+			return this.metric[this.primaryKey];
+		},
 		config() {
 			return {
-				compid: this.metric.psofia_recordid + '-historygraph',
+				compid: this.metricID + '-historygraph',
 				uspName: this.metric.uspname,
 				editable: false,
 				chart: null
@@ -60,7 +66,7 @@ export default {
 
 	// START
 	mounted() {
-		$('#history-modal-'+this.metric.psofia_recordid).modal()
+		$('#history-modal-'+this.metricID).modal()
 	},
 
 	// remove window resize listener
@@ -71,7 +77,6 @@ export default {
 
 		// fetch widget data
 		fetchData() {
-
 			// set loading
 			this.isLoading = true
 
@@ -94,7 +99,7 @@ export default {
 		// set up data to go into line chart
 		formatDataForChart(_data) {
 			if (!_data) return
-			var ctx = document.querySelector('#cvs-' + this.metric.psofia_recordid)
+			var ctx = document.querySelector('#cvs-' + this.metricID)
 			var config = {
 				type: 'line',
 				data: {
@@ -152,7 +157,7 @@ export default {
 		},
 
 		openHistoryModal() {
-			$('#history-modal-'+this.metric.psofia_recordid).modal('open')
+			$('#history-modal-'+this.metricID).modal('open')
 			Vue.nextTick(this.fetchData)
 		}
 	}

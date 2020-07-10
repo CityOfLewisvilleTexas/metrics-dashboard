@@ -21,13 +21,16 @@ export default {
 	},
 
 	computed: {
+		isStats() {
+			return this.$store.getters.isStats
+		},
 		departments() {
 			return this.$store.state.departments.sort((a,b) => {
 				if (a.bmpdisplayname < b.bmpdisplayname) return -1
 				if (a.bmpdisplayname > b.bmpdisplayname) return 1
 				return 0
 			})
-		}
+		},
 	},
 
 	watch: {
@@ -44,7 +47,7 @@ export default {
 
 	methods: {
 		linkToDept(dept) {
-			var site = this.$store.state.site == 'stats' ? 'stats' : 'public'
+			var site = this.isStats ? 'stats' : 'public'
 			return './#/dashboard/' + site + '/details/' + dept.bmpdisplayname.replace(/ /g, '').toLowerCase()
 		}
 	}

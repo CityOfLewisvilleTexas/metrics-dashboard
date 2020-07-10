@@ -14,12 +14,12 @@ export default {
   components: {},
 
   mounted() {
-    // if stats domain, redirect ot the stats page
-    // if (location.href.indexOf('stats.cityoflewisville.com') != -1 && ) {
-    //   this.$router.push({path: '/dashboard/stats'})
-    // }
     this.setSite()
     this.setSize()
+    $(window).resize(this.setSize)
+  },
+  beforeDestroy() {
+    $(window).off('resize')
   },
 
   data () {
@@ -29,14 +29,27 @@ export default {
   },
 
   computed: {
+    siteDomain() {
+      return this.$store.state.domainName
+    },
     site() {
       return this.$store.state.site
-    }
+    },
+    siteFilters() {
+      return this.$store.state.siteFilters
+    },
   },
 
   watch: {
-    site() {
-      this.goToSite()
+    $route (to, from){
+        this.setSite();
+    },
+    siteFilters: {
+      handler(val){
+        console.log('change to siteFilters')
+        this.initialFetchPerfMeasures()
+      },
+      deep: true
     }
   },
 
@@ -45,30 +58,48 @@ export default {
       this.$store.commit('setSize')
     },
     setSite() {
-      var site = location.href.indexOf('stats.cityoflewisville.com') == -1 ? 'metrics' : 'stats'
-      this.$store.commit('setSite', site)
-    },
-
-    goToSite() {
-      // specifies metrics to get
-      var _params = {
-        public: this.site == 'stats' ? 0 : 1,
-        internal: 0,
-        stat: this.site == 'stats' ? 1 : 0,
-        sitename: this.site == 'stats' ? 'stat': 'metricPublic',
+      var domainName = location.href.indexOf('stats.cityoflewisville.com') == -1 ? 'metrics' : 'stats';
+      var filters = {
+        sitename: '',
         status: 'deployed',
         type: '',
-        master: ''
+        master: '',
+      }
+      var isStatView = this.$route.fullPath.indexOf('stats') != -1 ? true : false
+      var isInternalView = this.$route.fullPath.indexOf('internal') != -1 ? true : false
+
+      if(domainName == 'stats'){
+        filters.sitename = 'stats'
+        // if adding stats internal only
+        if(isInternalView){
+          filters.master = 'stats_internal'
+        }
+      }
+      else{ //metrics.col
+        if(isStatView) filters.sitename = 'stats'
+        else{
+          filters.sitename = 'metricPublic
+          if(isInternalView){
+            filters.sitename = 'metricInternal'
+            filters.master = 'metrics_internal'
+          }
+        }
       }
 
-      // call fetch on Store, exclude carousel page
-      if(this.$route.fullPath.indexOf('carousel') == -1 && this.$route.fullPath.indexOf('admin') == -1){  /* clarson - include admin? */
-        console.log('initial fetch')
-        this.$store.dispatch('fetchMetrics', _params)
-      }
+      if(this.$route.fullPath.indexOf('admin') != -1) filters.master = 'admin'
 
-      var sitename = this.site == 'stats' ? 'stats' : location.href.indexOf('donna')!=-1 ? 'donna' : location.href.indexOf('details')!=-1 ? '' : ''
-      // if (sitename != '') this.$router.push({ path: '/dashboard/'+sitename })
+      // carousel will not have refreshing metrics
+      if(this.$route.fullPath.indexOf('carousel') != -1){
+        if(this.siteFilters.sitename != filters.sitename || this.siteFilters.status != filters.status || this.siteFilters.type != filters.type || this.siteFilters.master != filters.master){
+          this.$store.commit('setSiteFilters', filters)
+          this.$store.commit('clearMetrics')
+        }
+      }
+    },
+
+    initialFetchPerfMeasures() {
+      // carousel will not have refreshing metrics
+      if(this.$route.fullPath.indexOf('carousel') != -1) this.$store.dispatch('fetchPerfMeasures')
     }
 
   }

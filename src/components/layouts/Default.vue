@@ -11,7 +11,7 @@
 				    	</li>
 				    	<li>
 				    		<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
-				    			<i class="material-icons" :class="{ active : $store.state.softReloading }">refresh</i>
+				    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
 				    		</a>
 				    	</li>
 				    </ul>
@@ -100,14 +100,11 @@
 <script>
 import Moment from 'moment'
 import GoalsPie2 from '../widgets/GoalsPie2'
-import MetricsByDeptBarChart from '../widgets/MetricsByDeptBarChart'
-import FixedNavBar from '../widgets/FixedNavBar'
 import HistoryGraph2 from '../widgets/HistoryGraph2'
 import DualHistoryGraph2 from '../widgets/DualHistoryGraph2'
 import ListOfMetrics from '../widgets/ListOfMetrics'
 import KPI from '../widgets/KPI'
 import SearchMetricsBar from '../widgets/SearchMetricsBar'
-import MetricCard from '../widgets/MetricCard'
 import ESRIMap from '../widgets/ESRIMap'
 import GoogleMap from '../widgets/GoogleMap'
 import TextBox from '../widgets/TextBox'
@@ -115,7 +112,7 @@ import DepartmentsDropdown from '../widgets/DepartmentsDropdown'
 export default {
 	name: 'Default',
 	components: {
-		GoalsPie2, MetricsByDeptBarChart, FixedNavBar, HistoryGraph2, DualHistoryGraph2, ListOfMetrics, KPI, SearchMetricsBar, MetricCard, ESRIMap, GoogleMap, TextBox, DepartmentsDropdown
+		GoalsPie2, HistoryGraph2, DualHistoryGraph2, ListOfMetrics, KPI, SearchMetricsBar, ESRIMap, GoogleMap, TextBox, DepartmentsDropdown
 	},
 	props: [],
 	data () {
@@ -225,7 +222,12 @@ export default {
 	},
 
 	mounted() {
-		this.$store.commit('setSite', 'metrics')
+		// clarson 7/9/20 - feel like this should be here instead of on dashboard component
+	    // if stats domain, redirect ot the stats page
+	    if (location.href.indexOf('stats.cityoflewisville.com') != -1) {
+	      this.$router.push({path: '/dashboard/stats'})
+	    }
+		//else this.$store.commit('setSite', 'metrics')
 	},
 
 	beforeDestroy() {
@@ -235,19 +237,9 @@ export default {
 
 		// for refreshing
 		fetchMetrics() {
-
-			// specifies which metrics to fetch
-			var _params = {
-				public: 1,
-				internal: 0,
-				stat: 0,
-				status: 'deployed',
-				type: '',
-				master: ''
-			}
-
+			console.log('Default - fetch metrics')
 			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
+			this.$store.dispatch('fetchPerfMeasures')
 		},
 
 		// used for backing up the layout -- ugly / hard to follow

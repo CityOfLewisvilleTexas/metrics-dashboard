@@ -13,7 +13,7 @@
 				    	</li>
 				    	<li>
 				    		<a @click="fetchMetrics">
-				    			<i class="material-icons" :class="{ active : $store.state.isLoading }">refresh</i>
+				    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
 				    		</a>
 				    	</li>
 				    </ul>
@@ -23,7 +23,7 @@
 		<div class="row">
 			<div class="col s12 l8 xl4">
 				<SearchMetricsBar />
-				<div class="col s12 left-align" v-if="softReloading">
+				<div class="col s12 left-align" v-if="isRefreshing">
 					Updating...
 				</div>
 				<div class="col s12 left-align" v-else>
@@ -51,16 +51,12 @@
 import Moment from 'moment'
 import GoalsPie from '../widgets/GoalsPie'
 import MetricsByDeptBarChart from '../widgets/MetricsByDeptBarChart'
-import FixedNavBar from '../widgets/FixedNavBar'
-import HistoryGraph from '../widgets/HistoryGraph'
 import ListOfMetrics from '../widgets/ListOfMetrics'
-import KPI from '../widgets/KPI'
 import SearchMetricsBar from '../widgets/SearchMetricsBar'
-import MetricCard from '../widgets/MetricCard'
 export default {
 	name: 'Admin',
 	components: {
-		GoalsPie, MetricsByDeptBarChart, FixedNavBar, HistoryGraph, ListOfMetrics, KPI, SearchMetricsBar, MetricCard
+		GoalsPie, MetricsByDeptBarChart, ListOfMetrics, SearchMetricsBar
 	},
 	props: [],
 	data () {
@@ -107,54 +103,37 @@ export default {
 			config7: {
 				compid: 'g7-list'
 			},
-			refreshedAt: ''
 		}
 	},
 
 	computed: {
 		isLoading() {
-			return this.$store.state.metrics.length == 0
+			return this.$store.state.isLoading
 		},
-		softReloading() {
+		isRefreshing() {
 			return this.$store.state.softReloading
-		}
+		},
+		lastRefreshed() {
+			return this.$store.state.lastRefreshed
+		},
+		refreshedAt() {
+			return this.$store.state.fromNow
+		},
 	},
 
 	watch: {
-		'$store.state.metrics'() {
-			this.updateRefreshedAt()
-		}
 	},
 
 	mounted() {
-		if(this.$store.state.metrics.length == 0) this.fetchMetrics()
-		setInterval(() => {
-			this.updateRefreshedAt()
-		}, 5000)
 	},
 
 	methods: {
 
 		// fetch all working metrics
 		fetchMetrics() {
+			console.log('Admin - fetch metrics')
 			this.$store.commit('clearMetrics')
-			// specifies which metrics to fetch
-			var _params = {
-				public: 0,
-				internal: 0,
-				stat: 0,
-				status: '',
-				type: '',
-				master: 'all'
-			}
-
-			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
-		},
-
-		updateRefreshedAt() {
-			if (this.$store.state.lastRefreshed) this.refreshedAt = Moment(this.$store.state.lastRefreshed).fromNow()
-			else this.refreshedAt = ''
+			this.$store.dispatch('fetchPerfMeasures')
 		},
 
 		// used for backing up the layout
@@ -173,9 +152,6 @@ export default {
 			localStorage.removeItem('l3')
 			location.reload()
 		},
-		test() {
-			console.log(this.$store.state)
-		}
 	}
 }
 </script>

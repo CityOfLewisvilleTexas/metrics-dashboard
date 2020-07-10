@@ -17,7 +17,7 @@ export default new Router({
   routes: [
     {
       path: '/',
-      redirect: '/dashboard/default'
+      redirect: '/dashboard/default'  // replaced by landing page
     },
     {
       path: '/dashboard/:location/details/:dept/',

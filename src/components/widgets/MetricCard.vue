@@ -1,5 +1,5 @@
 <template>
-	<div class="card metric-card" :id="'metric-card-' + metric.psofia_recordid" :class="{ active: metric.psofia_recordid == $route.params.id }">
+	<div class="card metric-card" :id="'metric-card-'+metricID" :class="{ active: metricID == $route.params.id }">
 		<div class="left-align card-title valign-wrapper white-text darken-1"
 			:class="{ 'grey': metric.metrictype == 'Static' || isStats, [metric.CurrentColor]: true }">
 			{{ metric.metricname }}
@@ -48,7 +48,7 @@
 						<div class="col s12 left-align card-text grey-text text-darken-2">{{ metric.metricdescription }}</div>
 					</div>
 
-					<div v-if="metric.metricgoal && location != 'stats'">
+					<div v-if="metric.metricgoal && !isStats">
 						<div class="col s12 left-align card-header grey-text">Goal:</div>
 						<div class="col s12 left-align card-text grey-text text-darken-2">{{ metric.metricgoal }}</div>
 					</div>
@@ -66,8 +66,8 @@
 					<div>
 						<div class="col s12 left-align card-header grey-text">Last Updated:</div>
 						<div class="col s12 left-align card-text grey-text text-darken-2" v-if="metric.metrictype == 'Static'">
-							<div>{{ relativeTime(metric.psofia_editeddate, metric) }}</div>
-							<div>{{ metric.psofia_editeddate }}</div>
+							<div>{{ relativeTime(metricEditDate, metric) }}</div>
+							<div>{{ metricEditDate }}</div>
 						</div>
 						<div v-else class="col s12 left-align card-text grey-text text-darken-2">
 							<div>{{ relativeTime(metric.lastrefreshed, metric) }}</div>
@@ -78,7 +78,7 @@
 			</div>
 		</div>
 
-		<div :id="'details-modal-'+metric.psofia_recordid" class="modal white details-modal">
+		<div :id="'details-modal-'+metricID" class="modal white details-modal">
 			<div class="modal-content">
 				<p class="flow-text">{{ metric.metricname }}</p>
 				<div class="details-table-holder">
@@ -95,7 +95,6 @@
 <script>
 import Vue from 'vue'
 import axios from 'axios'
-import HistoryGraph from '../widgets/HistoryGraph'
 import HistoryButton from '../widgets/HistoryButton'
 import DetailsTable from '../widgets/DetailsTable'
 import MetricCardValue from '../widgets/MetricCardValue'
@@ -103,37 +102,59 @@ import Moment from 'moment'
 export default {
 	name: 'MetricCard',
 	components: {
-		HistoryGraph, DetailsTable, MetricCardValue, HistoryButton
+		HistoryButton, DetailsTable, MetricCardValue
 	},
-	props: ['metric','editing'],
+	props:{
+		metric:{
+			type: Object,
+			required: true,
+		},
+		editing:{
+			type: Boolean,
+			required: false,
+			default: false,
+		}
+	},
 	data () {
 		return {
 			forceUpdater: null,
-			config: {
-				compid: 'history-graph-' + this.metric.psofia_recordid,
+			/*config: {
+				compid: 'history-graph-' + this.metricID,
 				title: '',
 				uspName: this.metric.uspname,
 				noBorder: true,
 				isVisible: false,
 				callback: this.setLastRefreshed
-			}
+			}*/
 		}
 	},
 	computed: {
-		location() {
-			return this.$route.params.location
-		},
 		isStats() {
-			return this.$route.fullPath.indexOf('stats') != -1
-		}
+			return this.$store.getters.isStats
+		},
+		primaryKey() {
+			return this.$store.getters.primaryKey
+		},
+		editDateKey() {
+			return this.$store.getters.editDateKey
+		},
+		entryURL(){
+			this.$store.getters.entryURL
+		},
+		metricID(){
+			return this.metric[this.primaryKey];
+		},
+		metricEditDate(){
+			this.metric[this.editDateKey];
+		},
+		formURL() {
+			this.entryURL + this.metricID;
+		},
 	},
 	watch: {
-		metric() {
-			this.config.uspName = this.metric.uspname
-		}
 	},
 	mounted() {
-		$('#details-modal-'+this.metric.psofia_recordid).modal()
+		$('#details-modal-'+this.metricID).modal()
 		this.forceUpdater = setInterval(this.$forceUpdate, 10000)
 	},
 	updated() {
@@ -144,52 +165,8 @@ export default {
 	},
 
 	methods: {
-		normalizeCards() {
-			return
-			var maxHeight = 0
-			$('#metric-list .card').each(function() {
-				if ($(this).height() > maxHeight) {
-					maxHeight = $(this).height()
-				}
-			}).height(maxHeight)
-		},
-
-		setLastRefreshed(history) {
-			// Vue.set(this.metric, 'lastrefreshed', history[0].lastimported)
-			this.setVsYesterday(history)
-		},
-
-		setVsYesterday(history) {
-			if (!history[1]) {
-				this.vsValue = ''
-				return
-			}
-			this.vsValue = (history[0].value - history[1].value).toFixed(2)
-			this.vsValue = (this.vsValue >= 0) ? '+' + String(this.vsValue).replace('-', '') : this.vsValue
-			if (this.metric.realtimetrendarrowcolordown_VSVal_ == 'Green') {
-				this.vsClass = (this.vsValue <= 0) ? 'green-text' : 'red-text'
-			}
-			else {
-				this.vsClass = (this.vsValue < 0) ? 'red-text' : 'green-text'
-			}
-		},
-
-		correctValue(value, metric) {
-
-			if (metric.gaugedataformat == 'PERCENT')
-				return Number((value*100).toFixed(2))+'%'
-			else if (metric.prevaluetext == '$') return (value).toFixed(2)
-			else return Number(value.toFixed(2))
-		},
-
-		openHistoryModal() {
-			this.config.isVisible = true
-			this.config.uspName = this.metric.uspname
-			$('#history-modal-'+this.metric.psofia_recordid).modal('open')
-		},
-
 		openDetailsModal() {
-			$('#details-modal-'+this.metric.psofia_recordid).modal('open')
+			$('#details-modal-'+this.metricID).modal('open')
 		},
 
 		relativeTime(datetime, metric) {
@@ -212,8 +189,56 @@ export default {
 		},
 
 		edit(metric) {
-			window.open('https://eservices.cityoflewisville.com/psofia/node/index.html?form=42&recordnumber=' + metric.psofia_recordid)
+			window.open(this.formURL)
 		}
+
+
+		// never called - ? (Cards aren't same height - maybe didn't work)
+		/*normalizeCards() {
+			return
+			var maxHeight = 0
+			$('#metric-list .card').each(function() {
+				if ($(this).height() > maxHeight) {
+					maxHeight = $(this).height()
+				}
+			}).height(maxHeight)
+		},*/
+
+		// lastrefreshed and vsyesterday set in sql procedure
+		/*setLastRefreshed(history) {
+			// Vue.set(this.metric, 'lastrefreshed', history[0].lastimported)
+			this.setVsYesterday(history)
+		},
+		setVsYesterday(history) {
+			if (!history[1]) {
+				this.vsValue = ''
+				return
+			}
+			this.vsValue = (history[0].value - history[1].value).toFixed(2)
+			this.vsValue = (this.vsValue >= 0) ? '+' + String(this.vsValue).replace('-', '') : this.vsValue
+			if (this.metric.realtimetrendarrowcolordown == 'green') {
+				this.vsClass = (this.vsValue <= 0) ? 'green-text' : 'red-text'
+			}
+			else {
+				this.vsClass = (this.vsValue < 0) ? 'red-text' : 'green-text'
+			}
+		},*/
+
+		// never called - in MetricCardValue component?
+		/*correctValue(value, metric) {
+
+			if (metric.gaugedataformat == 'PERCENT')
+				return Number((value*100).toFixed(2))+'%'
+			else if (metric.prevaluetext == '$') return (value).toFixed(2)
+			else return Number(value.toFixed(2))
+		},*/
+
+		// never called - in HistoryButton component?
+		/*openHistoryModal() {
+			this.config.isVisible = true
+			this.config.uspName = this.metric.uspname
+			$('#history-modal-'+this.metricID).modal('open')
+		},*/
 	}
 }
 </script>

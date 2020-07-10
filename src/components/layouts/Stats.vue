@@ -11,7 +11,7 @@
 				    	</li>
 				    	<li>
 				    		<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
-				    			<i class="material-icons" :class="{ active : $store.state.softReloading }">refresh</i>
+				    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
 				    		</a>
 				    	</li>
 				    </ul>
@@ -80,33 +80,21 @@
 
 <script>
 import Moment from 'moment'
-import GoalsPie from '../widgets/GoalsPie'
-import GoalsPie2 from '../widgets/GoalsPie2'
-import MetricsByDeptBarChart from '../widgets/MetricsByDeptBarChart'
-import FixedNavBar from '../widgets/FixedNavBar'
-import HistoryGraph from '../widgets/HistoryGraph'
-import HistoryGraph2 from '../widgets/HistoryGraph2'
-import DualHistoryGraph from '../widgets/DualHistoryGraph'
-import DualHistoryGraph2 from '../widgets/DualHistoryGraph2'
 import ListOfMetrics from '../widgets/ListOfMetrics'
 import KPI from '../widgets/KPI'
 import SearchMetricsBar from '../widgets/SearchMetricsBar'
-import MetricCard from '../widgets/MetricCard'
-import ESRIMap from '../widgets/ESRIMap'
-import GoogleMap from '../widgets/GoogleMap'
-import TextBox from '../widgets/TextBox'
 import DepartmentsDropdown from '../widgets/DepartmentsDropdown'
+
 export default {
 	name: 'Stats',
 	components: {
-		GoalsPie, GoalsPie2, MetricsByDeptBarChart, FixedNavBar, HistoryGraph, HistoryGraph2, DualHistoryGraph, DualHistoryGraph2, ListOfMetrics, KPI, SearchMetricsBar, MetricCard, ESRIMap, GoogleMap, TextBox, DepartmentsDropdown
+		ListOfMetrics, KPI, SearchMetricsBar, DepartmentsDropdown
 	},
 	props: [],
 	data () {
 		return {
 			id: 'l3',
 			searchTerm: '',
-			underLarge: false,
 			saveSettings: {
 				callback: this.saveLayout,
 				localStorageKey: 'l3'
@@ -157,28 +145,22 @@ export default {
 		},
 		refreshedAt() {
 			return this.$store.state.fromNow
-		}
+		},
+		underLarge() {
+			return this.$store.state.underLarge
+		},
 	},
 
 	watch: {
 	},
 
 	mounted() {
-		this.$store.commit('setSite', 'stats')
-		this.setSize()
-		$(window).resize(this.setSize)
 	},
 
 	beforeDestroy() {
-		$(window).off('resize')
 	},
 
 	methods: {
-
-		setSize() {
-			this.underLarge = ($(window).width() < 1200) ? true : false
-		},
-
 		// uses store to fetch metrics
 		fetchMetrics() {
 
@@ -187,6 +169,7 @@ export default {
 				public: 0,
 				internal: 0,
 				stat: 1,
+				sitename: 'stat',
 				status: 'deployed',
 				type: '',
 				master: ''
