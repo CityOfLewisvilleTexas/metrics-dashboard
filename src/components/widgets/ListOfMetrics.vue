@@ -398,6 +398,9 @@ export default {
 					window.open('https://metrics.cityoflewisville.com/d/#/dashboard/public/details/'+dept+'/'+metric.psofia_recordid, '_blank');
 				}
 			}
+			else if(this.config.stats && window.location.hostname.startsWith('metrics')){
+				window.open('http://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
+			}
 			else{
 				var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1 || this.config.stats
 				// go to the details page
