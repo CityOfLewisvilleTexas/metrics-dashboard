@@ -8,7 +8,7 @@
 				    <ul class="right">
 				    	<li>
 				    		<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
-				    			<i class="material-icons" :class="{ active : $store.state.softReloading }">refresh</i>
+				    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
 				    		</a>
 				    	</li>
 				    </ul>
@@ -27,7 +27,7 @@
 							<div class="double-bounce1"></div>
 							<div class="double-bounce2"></div>
 						</div>
-						<div class="updating" v-if="isRefreshing || isLoading">
+						<div class="updating" v-if="isRefreshing">
 							Updating...
 						</div>
 						<div v-else>
@@ -58,30 +58,27 @@
 
 <script>
 import Moment from 'moment'
-import GoalsPie from '../widgets/GoalsPie'
 import GoalsPie2 from '../widgets/GoalsPie2'
-import MetricsByDeptBarChart from '../widgets/MetricsByDeptBarChart'
-import FixedNavBar from '../widgets/FixedNavBar'
-import HistoryGraph from '../widgets/HistoryGraph'
 import HistoryGraph2 from '../widgets/HistoryGraph2'
-import DualHistoryGraph from '../widgets/DualHistoryGraph'
 import DualHistoryGraph2 from '../widgets/DualHistoryGraph2'
-import ListOfMetrics from '../widgets/ListOfMetrics'
-import KPI from '../widgets/KPI'
-import SearchMetricsBar from '../widgets/SearchMetricsBar'
-import MetricCard from '../widgets/MetricCard'
 import ESRIMap from '../widgets/ESRIMap'
 export default {
 	name: 'FixedDemo',
 	components: {
-		GoalsPie, GoalsPie2, MetricsByDeptBarChart, FixedNavBar, HistoryGraph, HistoryGraph2, DualHistoryGraph, DualHistoryGraph2, ListOfMetrics, KPI, SearchMetricsBar, MetricCard, ESRIMap
+		GoalsPie2, HistoryGraph2, DualHistoryGraph2, ESRIMap
 	},
 	props: [],
 	data () {
 		return {
+			debug: true,
+			params: {
+				sitename: 'metricPublic',
+				status: 'deployed',
+				type: '',
+				master: '',
+			},
+
 			id: 'l3',
-			searchTerm: '',
-			underLarge: false,
 			saveSettings: {
 				callback: this.saveLayout,
 				localStorageKey: 'l3'
@@ -141,64 +138,58 @@ export default {
 				title: 'Travel Conditions',
 				url: '//lewisville.maps.arcgis.com/apps/Embed/index.html?webmap=c5c4c8df620744d5b284632612c0aa86&amp;extent=-97.2252,32.9672,-96.7181,33.1355&zoom=true&previewImage=false&scale=false&disable_scroll=true&theme=light'
 			},
-			refreshedAt: ''
 		}
 	},
 
 	computed: {
-		isLoading() {
-			return this.$store.state.isLoading
-		},
-		isRefreshing() {
-			return this.$store.state.softReloading
-		}
+		isLoading() { return this.$store.state.isLoading },
+		isRefreshing() { return this.$store.state.softReloading },
+		refreshedAt() { return this.$store.state.fromNow },
+		underLarge() { return this.$store.state.underLarge },
+		// debug only
+		categoriesLoading(){ return this.$store.getters.isLoading_categories },
 	},
 
 	watch: {
-		'$store.state.metrics'() {
-			this.updateRefreshedAt()
-		}
+		isLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('isLoading: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
+		isRefreshing:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('isRefreshing: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
+		categoriesLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('categoriesLoading: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
 	},
 
 	mounted() {
-		this.setSize()
-		$(window).resize(this.setSize)
-		if(this.$store.state.metrics.length == 0) this.fetchMetrics()
-		setInterval(() => {
-			this.updateRefreshedAt()
-		}, 5000)
+		if(this.debug) console.log('Mounted')
+		this.updateFetchParams()
 	},
 
 	beforeDestroy() {
-		$(window).off('resize')
 	},
 
 	methods: {
-
-		setSize() {
-			this.underLarge = ($(window).width() < 1200) ? true : false
+		updateFetchParams() {
+			var payload = { params: this.params }
+			if(this.debug) console.log('Update fetch params')
+			this.$store.dispatch('updateFetchParams', payload)
 		},
-
 		// uses store to fetch metrics
 		fetchMetrics() {
-
-			// specifies which metrics to fetch
-			var _params = {
-				public: 1,
-				internal: 0,
-				stat: 0,
-				status: 'deployed',
-				type: '',
-				master: ''
-			}
-
-			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
-		},
-
-		updateRefreshedAt() {
-			if (this.$store.state.lastRefreshed) this.refreshedAt = Moment(this.$store.state.lastRefreshed).fromNow()
-			else this.refreshedAt = ''
+			if(this.debug) console.log('Fetch metrics')
+			this.$store.commit('clearMetrics')
+			this.$store.dispatch('fetchPerfMeasures')
 		},
 
 		// used for backing up the layout

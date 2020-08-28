@@ -1,130 +1,120 @@
 <template>
-	<div :id="config.compid" class="card" :class="{ donna: $route.name == 'Donna', 'met-carousel': $route.name == 'Carousel' }">
-		<div class="title grey lighten-2 grey-text text-darken-1 left-align" v-if="!isLoading">
-			{{ department }}
-			<small class="grey-text">( {{ metrics.length }} )</small>
-			<i class="material-icons right tooltipped" :data-tooltip="config.why" data-delay="0" v-if="config.why">help</i>
+	<div :id="compid" class="card" :class="{ donna: $route.name == 'Donna', 'lp-carousel': $route.name == 'Carousel' }">
+		<div class="title col-purple white-text left-align">
+			{{ title }}
+			<small v-if="countFilteredMetrics > 0" class="white-text">( {{ countFilteredMetrics }} )</small>
+			<i v-if="config.why" class="material-icons right tooltipped" :data-tooltip="config.why" data-delay="0">help</i>
+			<i v-if="isLandingPageCarousel" @click="fetchLPCarousel"
+				class="material-icons right" :class="{ active : storeIsRefreshing }">refresh</i>
 		</div>
 		<div class="background white">
 			<div class="filters">
 				<b>Sort by: </b>
-				<a id="sorter-button" class="dropdown-button btn" data-activates="sorter-dropdown">
+				<a :id="compid + '-sorter-dropdown'" :data-activates="compid + '-sorter-content'" class="dropdown-button btn">
 					{{ sorter.by == 'CurrentColor' ? 'Value' : 'Name' }}
 					<i class="material-icons right">
-						{{ sorter.order == 1 ? 'arrow_upward' : 'arrow_downward' }}
+						{{ sorter.order == 1 ? 'arrow_downward' : 'arrow_upward' }}
 					</i>
 				</a>
-				<ul id="sorter-dropdown" class="dropdown-content">
-					<li>
-						<a class=""
-							@click="setSorter('realtimeshortname')"
-							:class="{ active: sorter.by == 'realtimeshortname' }">
+				<ul :id="compid + '-sorter-content'" class="dropdown-content">
+					<li :class="{ active: sorter.by == 'realtimeshortname' }">
+						<a @click="setSorter('realtimeshortname')">
 							Name
+							<i v-if="sorter.by == 'realtimeshortname'" class="material-icons right">
+								{{ sorter.order == 1 ? 'arrow_upward' : 'arrow_downward' }}
+							</i>
 						</a>
 					</li>
-					<li>
-						<a class=""
-							@click="setSorter('CurrentColor')"
-							:class="{ active: sorter.by == 'CurrentColor' }">
+					<li :class="{ active: sorter.by == 'CurrentColor' }">
+						<a @click="setSorter('CurrentColor')">
 							Value
+							<i v-if="sorter.by == 'CurrentColor'" class="material-icons right">
+								{{ sorter.order == 1 ? 'arrow_upward' : 'arrow_downward' }}
+							</i>
 						</a>
 					</li>
 				</ul>
 			</div>
 
-			<div class="filters" v-if="!isLoading && (!isStats || (isStats && !isCarousel))">
+			<div class="filters" v-if="!onlyStats">
 				<b>Filter by: </b>
 
-				<a id="filter-button" class="dropdown-button btn" data-activates="filter-dropdown">
+				<a :id="compid + '-filter-dropdown'" :data-activates="compid + '-filter-content'" class="dropdown-button btn">
 					{{ filter1.value == 'red' ? 'Delayed' : filter1.value == 'light-green' ? 'On track' : filter1.value == 'green' ? 'Exceeding Expectations' : 'All' }}
 				</a>
-				<ul id="filter-dropdown" class="dropdown-content">
-					<li>
-						<a class=""
-							@click="setFilter(1)"
-							:class="{ active: filter1.attr == '' }">
+				<ul :id="compid + '-filter-content'" class="dropdown-content">
+					<li :class="{ active: filter1.attr == '' }">
+						<a @click="setFilter(1)">
 							All
 						</a>
 					</li>
-					<li>
-						<a class=""
-							@click="setFilter(1, 'red', 'CurrentColor')"
-							:class="{ active: filter1.value == 'red' }">
+					<li :class="{ active: filter1.value == 'red' }">
+						<a @click="setFilter(1, 'red', 'CurrentColor')">
 							Delayed
 						</a>
 					</li>
-					<li>
-						<a class=""
-							@click="setFilter(1, 'light-green', 'CurrentColor')"
-							:class="{ active: filter1.value == 'light-green' }">
+					<li :class="{ active: filter1.value == 'light-green' }">
+						<a @click="setFilter(1, 'light-green', 'CurrentColor')">
 							On Track
 						</a>
 					</li>
-					<li>
-						<a class=""
-							@click="setFilter(1, 'green', 'CurrentColor')"
-							:class="{ active: filter1.value == 'green' }">
+					<li :class="{ active: filter1.value == 'green' }">
+						<a @click="setFilter(1, 'green', 'CurrentColor')">
 							Exceeding Expectations
 						</a>
 					</li>
 				</ul>
 			</div>
-			<ListOfDepartmentsButton :compid="config.compid+'-listbutton'" :callback="setDepartment" class="edit-button" v-if="config.editable" />
+			<ListOfDepartmentsButton v-if="config.editable && !this.departmentsLoading"
+				:config="{compid: compid+'-deptdropdown'}" :filteredDepartments="filteredDepartments" :callback="setDepartment" class="edit-button" />
 			<div class="loader" v-if="isLoading"></div>
 			<table v-if="!isLoading" class="highlight bordered">
 				<thead>
 					<tr>
 						<th class="grey-text">Metric</th>
-						<th class="grey-text hide-on-small-only" v-if="department == 'All Departments'">Dept</th>
-						<th class="grey-text hide-on-small-only" v-if="isCarousel">Type</th>
-						<th class="grey-text" v-if="(!isStats || (isStats && !isCarousel))">Goal</th>
-						<th class="center-align grey-text">Value</th>
-						<th class="center-align grey-text hide-on-med-and-down">Weekly Avg</th>
-						<th class="center-align grey-text hide-on-small-only">Monthly Avg</th>
-						<th class="center-align grey-text" v-if="admin">Location</th>
-						<th class="center-align grey-text" v-if="admin">Edit</th>
+						<th v-if="showDeptCol" class="col-purple-text hide-on-small-only">Dept</th>
+						<th v-if="isCombo" class="col-purple-text hide-on-small-only">Type</th>
+						<th v-if="!onlyStats" class="col-purple-text">Goal</th>
+						<th class="center-align col-purple-text">Value</th>
+						<th class="center-align col-purple-text hide-on-med-and-down">Weekly Avg</th>
+						<th class="center-align col-purple-text hide-on-small-only">Monthly Avg</th>
+						<th v-if="isAdmin" class="center-align col-purple-text">Location</th>
+						<th v-if="isAdmin" class="center-align col-purple-text">Status</th>
+						<th v-if="isAdmin" class="center-align col-purple-text">Edit</th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr v-for="metric in splitMetrics[page-1]">
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2">{{ metric.realtimeshortname }}</td>
-						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="department == 'All Departments'">
-							{{ metric.Department }}
-						</td>
-						<td @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only" v-if="isCarousel">{{ showSitename(metric) }}</td>
-						<td @click="gotoMetric(metric)" class="grey-text text-darken-2" v-if="(!isStats || (isStats && !isCarousel))">
+						<td v-if="showDeptCol" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only">{{ metric.Department }}</td>
+						<td v-if="isCombo" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only">{{ getTypeOfText(metric) }}</td>
+						<td v-if="!onlyStats" @click="gotoMetric(metric)" class="grey-text text-darken-2">
 							{{ !(checkIfStat(metric)) ? metric.metricgoal : '' }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
-							{{ correctValue(metric.CurrentValue, metric) }}
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="getTextColor(metric)">
+							{{ metricValue(metric, 'current') }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
-							{{ correctValue(metric.WeeklyValue, metric) }}
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="getTextColor(metric)">
+							{{ metricValue(metric, 'weekly') }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="!(checkIfStat(metric)) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
-							{{ correctValue(metric.MonthlyValue, metric) }}
+						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="getTextColor(metric)">
+							{{ metricValue(metric, 'monthly') }}
 						</td>
-						<td class="center-align grey-text text-darken-2" v-if="admin">
-							    <select class="browser-default" @change="setMetricLocation(metric.psofia_recordid, $event)">
-							      <option value="public" :selected="metric.metricispublic">Public</option>
-							      <option value="internal" :selected="metric.metricisinternal">Internal</option>
-							      <option value="stat" :selected="!(checkIfStat(metric))">Stat</option>
-							      <option value="development" :selected="metric.metricstatus == 'development'">Development</option>
-							      <option value="review" :selected="metric.metricstatus == 'review'">Review</option>
-							    </select>
-						</td>
-						<td class="center-align grey-text text-darken-2" v-if="admin">
-							<a class="btn-flat grey lighten-2"
-								:href="'http://eservices.cityoflewisville.com/psofia/node/index.html?form=42&amp;recordnumber='+metric.psofia_recordid"
-								target="_blank">
+						<td v-if="isAdmin" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only">{{ getLocationText(metric) }}</td>
+						<td v-if="isAdmin" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only">{{ getStatusText(metric) }}</td>
+						<td v-if="isAdmin" class="center-align grey-text text-darken-2">
+							<a @click="gotoMetricForm(metric)" class="btn-flat grey lighten-2">
 								<i class="material-icons">edit</i>
 							</a>
 						</td>
 					</tr>
+					<tr v-if="filteredMetrics.length == 0">
+						<td :colspan="noMetricsColSpan" class="center-align grey-text text-darken-2">No Metrics Found Here</td>
+					</tr>
 				</tbody>
 			</table>
-			<div class="page-system left-align" v-if="splitMetrics.length > 1">
-				<ul class="pagination" v-if="!isLoading">
+			<div v-if="!isLoading && splitMetrics.length > 1" class="page-system left-align">
+				<ul class="pagination">
 				    <li class="pointy" :class="{ disabled : page == 1 }" @click="setPage(page == 1 ? page : page-1, true)">
 				    	<a><i class="material-icons">chevron_left</i></a>
 				    </li>
@@ -135,7 +125,7 @@
 				    	<a @click="setPage(page == splitMetrics.length ? page : page+1, true)"><i class="material-icons">chevron_right</i></a>
 				    </li>
 				</ul>
-				<div class="autoplay" v-if="!isLoading">
+				<div class="autoplay">
 					<div class="progress" v-if="autoplay">
 						<div class="determinate" :style="'width: '+ progress +'%'"></div>
 					</div>
@@ -144,13 +134,11 @@
 							Auto-cycle?
 							<input type="checkbox" v-model="autoplay">
 							<span class="lever"></span>
-							<!-- on -->
 					    </label>
 				  	</div>
 				</div>
 			</div>
 		</div>
-
 	</div>
 </template>
 
@@ -159,25 +147,36 @@ import Vue from 'vue'
 import ListOfDepartmentsButton from '../widgets/ListOfDepartmentsButton'
 export default {
 	name: 'ListOfMetrics',
-	components: {
-		ListOfDepartmentsButton
-	},
-	props: //['saveSettings','admin', 'config'],
-		{
-			saveSettings: Object,
-			admin: Boolean,
-			config: Object,
-			department: {
-				type: String,
-				default: 'All Departments'
-			}
+	components: { ListOfDepartmentsButton },
+	props: {
+		config: {
+			type: Object,
+			required: true,
 		},
+		// used by statsCarousel and metricsCarousel
+		currentCategory: {
+			type: Object,
+			required: false,
+			default: null,
+		},
+		saveSettings: {
+			type: Object,
+			required: false,
+			default: null,
+		},
+	},
 	data () {
 		return {
-			//department: 'All Departments',
+			debug: true,
+			needsInit: true,
+			needsInit_materialize: true,
+			needsInit_timer: true,
+
+			department: null,
+			isLoadingDept: true,
 			sorter: {
-				by: this.$route.name == 'Donna' ? 'CurrentColor' : 'realtimeshortname',
-				order: this.$route.name == 'Donna' ? 1 : -1,
+				by: 'realtimeshortname',
+				order: 1,
 			},
 			filter1: {
 				attr: '',
@@ -191,7 +190,6 @@ export default {
 				attr: '',
 				value: ''
 			},
-			adminMetric: {},
 			page: 1,
 			timer: null,
 			autoplay: true,
@@ -200,75 +198,127 @@ export default {
 	},
 
 	computed: {
-		metrics() {
-			if (this.config.stats) {
-				return this.$store.state.stats
-				.filter(metric => {
-					var keep = true
-					keep = metric.metrictype == 'Query'
-					if (!keep) return false
-					if (this.filter1.attr)
-						keep = metric[this.filter1.attr] == this.filter1.value
-					if (!keep) return false
-					if (this.filter2.attr)
-						keep = metric[this.filter2.attr] == this.filter2.value
-					if (!keep) return false
-					if (this.filter3.attr)
-					keep = metric[this.filter3.attr] == this.filter3.value
-					if (!keep) return false
-					if (this.department != 'All Departments')
-						keep = metric.Department == this.department
-					if (!keep) return false
-					return keep
-				})
-				.sort((a,b) => {
-					// if (!this.config.sortBy) return
-					if (a[this.sorter.by] < b[this.sorter.by]) return (this.sorter.order)
-					if (a[this.sorter.by] > b[this.sorter.by]) return (this.sorter.order*-1)
-					else {
-						if (a.realtimeshortname.toLowerCase().replace(/ /g, '') < b.realtimeshortname.toLowerCase().replace(/ /g, '')) return -1
-						if (a.realtimeshortname.toLowerCase().replace(/ /g, '') > b.realtimeshortname.toLowerCase().replace(/ /g, '')) return 1
-						return 0
-					}
-				})
-			} else {
-				return this.$store.state.metrics
-				.filter(metric => {
-					var keep = true
-					keep = metric.metrictype == 'Query'
-					if (!keep) return false
-					if (this.filter1.attr)
-						keep = metric[this.filter1.attr] == this.filter1.value
-					if (!keep) return false
-					if (this.filter2.attr)
-						keep = metric[this.filter2.attr] == this.filter2.value
-					if (!keep) return false
-					if (this.filter3.attr)
-					keep = metric[this.filter3.attr] == this.filter3.value
-					if (!keep) return false
-					if (this.department != 'All Departments')
-						keep = metric.Department == this.department
-					if (!keep) return false
-					return keep
-				})
-				.sort((a,b) => {
-					// if (!this.config.sortBy) return
-					if (a[this.sorter.by] < b[this.sorter.by]) return (this.sorter.order)
-					if (a[this.sorter.by] > b[this.sorter.by]) return (this.sorter.order*-1)
-					else {
-						if (a.realtimeshortname.toLowerCase().replace(/ /g, '') < b.realtimeshortname.toLowerCase().replace(/ /g, '')) return -1
-						if (a.realtimeshortname.toLowerCase().replace(/ /g, '') > b.realtimeshortname.toLowerCase().replace(/ /g, '')) return 1
-						return 0
-					}
-				})
+		routeName(){ return this.$route.name },
+		locationParam() { return this.$route.params.location },
+		deptParam() { return this.$route.params.location },
+
+		routeDepts() { return this.$store.getters.routeDepts },
+		isStats() { return this.$store.getters.isStats },
+		departments() { return this.$store.getters.categoriesByType('department') },
+		category_all() { return this.routeDepts.find(routeDept => routeDept.deptParam == 'all') },
+		
+		// set either in config or by route
+		isAdmin(){
+			if(this.config.hasOwnProperty('admin')) return this.config.admin
+			else return (this.routeName == 'Admin' || this.locationParam == 'admin')
+		},
+		// set either in config or by route
+		isEditing(){
+			if(this.config.hasOwnProperty('editing')) return this.config.editing
+			else return (this.routeName == 'DetailsEdit' || this.routeName == 'DetailsWithIdEdit')
+		},
+		compid(){
+			if(this.config && this.config.hasOwnProperty('compid')) return this.config.compid
+			else if(this.isLandingPageCarousel) return 'landingcarousel'
+			else if(this.isStatsCarousel) return 'statscarousel'
+			else if(this.isMetricsCarousel) return 'metricscarousel'
+			else return 'listcarousel'
+		},
+		// set in config
+		isLandingPageCarousel() { return (this.config.hasOwnProperty('type') && this.config.type == 'landingPageCarousel') },
+		isStatsCarousel() { return (this.config.hasOwnProperty('type') && this.config.type == 'statsCarousel') },
+		isMetricsCarousel() { return (this.config.hasOwnProperty('type') && this.config.type == 'metricsCarousel') },
+		detailCarouselCategory() {
+			if(this.isStatsCarousel || this.isMetricsCarousel){
+				if(this.currentCategory){
+					if(this.currentCategory.hasOwnProperty('id')) return this.currentCategory
+					// handle if not provided fullCategory
+					else return this.$store.getters.fullCategory(this.currentCategory)
+				}
+				// handle if not provided currentCategory (statsCarousel and metricsCarousel is required)
+				else if(this.deptParam) return this.$store.getters.fullCategoryByDeptParam(this.deptParam)
+				else return this.category_all
 			}
-			
+			else return null
+		},
+
+		isLoading() { return this.storeIsLoading || this.isLoadingDept },
+		storeIsLoading() {
+			if(this.isLandingPageCarousel) return this.$store.getters.isLoading_landingPageCarousel
+			else if(this.isStatsCarousel || this.isMetricsCarousel) return this.$store.getters.isLoading_detailCarousel
+			else return this.$store.state.isLoading
+		},
+		storeIsRefreshing() {
+			if(this.isLandingPageCarousel) return this.$store.state.landingPageCarouselSoftReloading
+			else if(this.isStatsCarousel || this.isMetricsCarousel) return this.$store.state.detailCarouselSoftReloading
+			else return this.$store.state.softReloading
+		},
+		departmentsLoading(){ return this.$store.getters.isLoading_categories },
+
+		// query metrics, filtered by department or category
+		metrics_included() {
+			if(this.storeIsLoading) return []
+			else if (this.isLandingPageCarousel) {
+				// already query only
+				return this.$store.state.landingPageCarousel
+			}
+			else if (this.isStatsCarousel || this.isMetricsCarousel) {
+				// already query only
+				if(this.detailCarouselCategory && this.detailCarouselCategory.id != 'all'){
+					return this.$store.getters.detailCarouselByPayload({ category: this.detailCarouselCategory, checkAll: true })
+				}
+				else return this.$store.state.detailCarousel
+			}
+			else {
+				if(this.isLoadingDept) return []
+				else if(this.department.id != 'all'){
+					return this.$store.getters.metricsByPayload({ type: 'query', category: this.department })
+				}
+				else return this.$store.getters.metricsByPayload({ type: 'query' })
+			}
+		},
+		// filtered by dropdown values
+		filteredMetrics(){
+			return this.metrics_included.filter(metric => {
+				var keep = true
+				if (this.filter1.attr)
+					keep = metric[this.filter1.attr] == this.filter1.value
+				if (!keep) return false
+				if (this.filter2.attr)
+					keep = metric[this.filter2.attr] == this.filter2.value
+				if (!keep) return false
+				if (this.filter3.attr)
+					keep = metric[this.filter3.attr] == this.filter3.value
+				if (!keep) return false
+				return keep
+			})
+		},
+		countFilteredMetrics(){ return this.filteredMetrics.length },
+		sortedMetrics(){
+			return this.filteredMetrics.sort((a,b) => {
+				if(a[this.sorter.by] === null) return (this.sorter.order*-1)
+				if(b[this.sorter.by] === null) return (this.sorter.order)
+				if(isNaN(a[this.sorter.by]) || isNaN(b[this.sorter.by])){
+					if (a[this.sorter.by].toLowerCase().replace(/ /g, '') > b[this.sorter.by].toLowerCase().replace(/ /g, '')) return (this.sorter.order)
+					if (a[this.sorter.by].toLowerCase().replace(/ /g, '') < b[this.sorter.by].toLowerCase().replace(/ /g, '')) return (this.sorter.order*-1)
+				}
+				else{
+					var comp = a[this.sorter.by] - b[this.sorter.by]
+					if(comp > 0) return (this.sorter.order)
+					if(comp < 0) return (this.sorter.order*-1)
+				}
+				if(this.sorter.by != 'realtimeshortname'){
+					if (a.realtimeshortname.toLowerCase().replace(/ /g, '') > b.realtimeshortname.toLowerCase().replace(/ /g, '')) return 1
+					if (a.realtimeshortname.toLowerCase().replace(/ /g, '') < b.realtimeshortname.toLowerCase().replace(/ /g, '')) return -1
+				}
+				return 0
+			})
 		},
 
 		splitMetrics() {
 			var splits = []
 			var pageSize = (this.config.pageSize ? this.config.pageSize : 10)
-			var _copy = JSON.parse(JSON.stringify(this.metrics))
+			var _copy = JSON.parse(JSON.stringify(this.sortedMetrics))
 			while (_copy.length) {
 				splits.push(_copy.slice(0,pageSize))
 				_copy = _copy.slice(pageSize)
@@ -276,154 +326,181 @@ export default {
 			return splits
 		},
 
-		departments() {
-			var depts = []
-			this.$store.state.metrics.forEach(metric => {
-				var exists = false
-				depts.forEach(cat => {
-					if (cat == metric.Department) exists = true
+		queryMetrics() {
+			if(this.config.editable) return this.$store.getters.metricsByPayload({ type: 'query' })
+		},
+		filteredDepartments(){
+			if(this.config.editable && !this.departmentsLoading){
+				if(this.queryMetrics.length == 0) return this.departments
+				else return this.departments.filter(department => {
+					return this.queryMetrics.some(metric => {
+						var metricCategory = this.$store.getters.metricCategory({ metric: metric, type: 'department' })
+						if(metricCategory && metricCategory.toLowerCase() == department.id.toLowerCase()) return true
+					})
 				})
-				if (!exists) depts.push(metric.Department)
-			})
-			return depts.sort((a,b) => {
-				if (a < b) return -1
-				if (a > b) return 1
-				return 0
-			})
+			} else return null
 		},
 
-		isLoading() {
-			return this.$store.state.isLoading
-		},
+		onlyMetrics(){ return ( this.isMetricsCarousel || (!this.isStats && !this.isAdmin && !this.isLandingPageCarousel && !this.isStatsCarousel) ) },
+		onlyStats(){ return ( this.isStatsCarousel || (this.isStats && !this.isAdmin && !this.isLandingPageCarousel && !this.isMetricsCarousel) ) },
+		isCombo(){ return (this.isAdmin || this.isLandingPageCarousel) },
 
-		isStats() {
-			return this.$store.state.site=='stats'
+		title(){
+			var title = ''
+			if(this.isLandingPageCarousel || this.isStatsCarousel || this.isMetricsCarousel){
+				if(this.isLandingPageCarousel) title = 'All Departments'
+				else{
+					if(this.detailCarouselCategory) title = this.detailCarouselCategory.display
+					else title = 'ERROR'
+				}
+				if(this.storeIsLoading) title += ' (Loading...)'
+			}
+			else{
+				if(this.department){
+					if(this.department.id != 'all') title = this.department.display
+					else title = 'All Departments'
+					if(this.storeIsLoading) title += ' (Loading...)'
+				}
+				else if(this.isLoadingDept) title = 'Loading...'
+				else title = 'ERROR'
+			}
+			return title
 		},
-
-		isCarousel() {
-			return this.$route.name == 'Carousel'
+		showDeptCol(){
+			if(this.isLandingPageCarousel) return true
+			else if(this.isStatsCarousel || this.isMetricsCarousel){
+				if(this.detailCarouselCategory) return (this.detailCarouselCategory.type != 'department')
+				else return true
+			}
+			else if(this.department) return (this.department.id == 'all')
+			else return false
+		},
+		noMetricsColSpan(){
+			var len = 4
+			if(this.showDeptCol) len++
+			if(this.isCombo) len++
+			if(!this.onlyStas) len++
+			if(this.isAdmin) len += 3
+			return len
 		}
+
 	},
 
 	watch: {
 
-		autoplay() {
-			if (this.autoplay) this.startTimer()
-			else this.setPage(this.page, true)
-		}
+		autoplay:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				console.log('autoplay: ' + oldVal + ' -> ' + newVal)
+				if( newVal ) this.startTimer()
+				else this.setPage(this.page, true)
+			},
+		},
+		isLoading:{
+			immediate: true,
+			handler(newVal, oldVal) {
+				// during load, reset timer, needs initialization again
+				if(!newVal && oldVal){
+					this.resetTimer()
+					this.needsInit_timer = true
+				}
+				// after load
+				else{
+					// set page so if current page is out of range, it will go back to pg 1
+					this.setPage(this.page, false)
+					// start timer if needed
+					if(this.needsInit_timer){
+						Vue.nextTick(this.initTimer)
+					}
+				}
+			},
+		},
 	},
 
 	mounted() {
-		// $('select').material_select()
-		$('.collapsible').collapsible()
-		$('#sorter-button').dropdown({
-			constrainWidth: true, // Does not change width of dropdown to that of the activator
-			belowOrigin: true,  // Displays dropdown below the button
-			alignment: 'left' // Displays dropdown with edge aligned to the left of button
-		})
-		$('#filter-button').dropdown({
-			constrainWidth: false, // Does not change width of dropdown to that of the activator
-			belowOrigin: true,  // Displays dropdown below the button
-			alignment: 'left' // Displays dropdown with edge aligned to the left of button
-		})
-		if (this.saveSettings) this.checkLocalStorage()
-		this.startTimer()
+		if(this.debug) console.log('Mounted')
+		this.init()
 	},
 
 	beforeDestroy() {
+		if(this.debug) console.log('Destroy')
+		$('#' + this.compid + '-sorter-dropdown').dropdown('destroy')
+		$('#' + this.compid + '-filter-dropdown').dropdown('destroy')
 	},
 
 	methods: {
-		checkLocalStorage() {
-			try {
-				if (localStorage.getItem(this.saveSettings.localStorageKey)) {
-					var _root = JSON.parse(localStorage.getItem(this.saveSettings.localStorageKey))
-					if (_root.hasOwnProperty(this.config.compid)) this.department = _root[this.config.compid]
-				}
-			} catch(e) {
-				console.log(e)
+		init(){
+			if(this.timer) this.timer = clearInterval(this.timer)
+
+			if(this.routeName.toLowerCase() == 'donna'){
+				this.sorter.by = 'CurrentColor'
+				this.sorter.order = 1
 			}
-		},
-
-		correctValue(value, metric) {
-			if (metric.gaugedataformat == 'PERCENT') return Number((value).toFixed(2))+'%'
-			else if (metric.prevaluetext == '$') return (value).toFixed(2)
-			else return Number(value.toFixed(2))
-		},
-
-		setDepartment(department) {
-			if (!department) return
-			if (department == 'All Departments') this.department = 'All Departments'
-			this.department = department
-			if (this.saveSettings)
-				this.saveSettings.callback(this.config.compid, department)
-		},
-
-		// checks both sitename and metricisstat and metricispublic
-		checkIfStat(metric){
-			if (metric.sitename_VSVal_){
-				if(metric.sitename == 'stat'){
-					// works for only one (correct) and more than one checked, sitename takes precedence
-					if (metric.metricisstat) return true
-					else { 
-						// works for no checkboxes
-						if (!(metric.metricispublic) && !(metric.metricisinternal)) return true
-						else return false
+			else if(this.config.hasOwnProperty('sorter')){
+				if(this.config.sorter.hasOwnProperty('by') && this.config.sorter.by) this.sorter.by = this.config.sorter.by
+				if(this.config.sorter.hasOwnProperty('order') && this.config.sorter.order){
+					if(this.config.sorter.order == -1 || this.config.sorter.order == 1) this.sorter.order = this.config.sorter.order
+					else if(this.config.sorter.order.toLowerCase().startsWith('a')){
+						if(this.sorter.by == 'CurrentColor') this.sorter.order = -1
+						else this.sorter.order = 1
+					}
+					else if(this.config.sorter.order.toLowerCase().startsWith('d')){
+						if(this.sorter.by == 'CurrentColor') this.sorter.order = 1
+						else this.sorter.order = -1
 					}
 				}
-				else{
-					// if stat is the only one checked, assue wrong sitename, check takes precedence
-					if (metric.metricisstat && !(metric.metricispublic) && !(metric.metricisinternal)) return true
-					else return false
-				}
 			}
+			this.initDropdowns()	// visible initially so can call on init
+
+			// don't start timer if config autoplay is off
+			if(this.config.hasOwnProperty('autoplay') && !this.config.autoplay) this.autoplay = this.config.autoplay
+
+			if(this.isLandingPageCarousel || this.isStatsCarousel || this.isMetricsCarousel) this.isLoadingDept = false
+			else if(this.saveSettings) this.checkLocalStorage()
 			else{
-				if (metric.metricisstat && !(metric.metricispublic) && !(metric.metricisinternal)) return true
-				else return false
+				this.department = this.category_all
+				this.isLoadingDept = false
 			}
-		},
-		showSitename(metric){
-			if (this.checkIfStat(metric)) return 'Stat'
-			else return 'Metric'
-		},
 
-		gotoMetric(metric) {
-			var dept = metric.Department.toLowerCase().replace(/ /g, '')
-
-			if(this.isCarousel){
-				if(this.checkIfStat(metric)){
-					window.open('http://stats.cityoflewisville.com/d/#/dashboard/stats/details/'+dept+'/'+metric.psofia_recordid, '_blank');
-				}
-				else{
-					window.open('https://metrics.cityoflewisville.com/d/#/dashboard/public/details/'+dept+'/'+metric.psofia_recordid, '_blank');
-				}
+			this.needsInit = false
+		},
+		initDropdowns(){
+			$('#' + this.compid + '-sorter-dropdown').dropdown({
+				constrainWidth: true, // Does not change width of dropdown to that of the activator
+				belowOrigin: true,  // Displays dropdown below the button
+				alignment: 'left' // Displays dropdown with edge aligned to the left of button
+			})
+			$('#' + this.compid + '-filter-dropdown').dropdown({
+				constrainWidth: false, // Does not change width of dropdown to that of the activator
+				belowOrigin: true,  // Displays dropdown below the button
+				alignment: 'left' // Displays dropdown with edge aligned to the left of button
+			})
+			this.needsInit_materialize = false
+		},
+		initTimer(){
+			if(this.debug) console.log('initTimer')
+			if(this.autoplay) this.startTimer()
+			this.needsInit_timer = false
+		},
+		// clears interval, doesn't change this.autoplay, doesn't change this.page or this.progress yet
+		resetTimer(){
+			if(this.debug) console.log('resetTimer')
+			if(this.timer) this.timer = clearInterval(this.timer)
+		},
+		restartTimer(){
+			if(this.debug) console.log('restartTimer')
+			this.page = 1	// goto page 1
+			this.progress = 100		// start 10 seconds again
+			if(!this.config.hasOwnProperty('autoplay') || this.config.autoplay){
+				// if autoplay was cancelled, call starttimer through watcher
+				if(!this.autoplay) this.autoplay = true
+				//else call starttimer directly
+				else this.startTimer()
 			}
-			else{
-				var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1 || this.config.stats
-				// go to the details page
-				this.$router.push({ path: '/dashboard/' + ((isStats) ? 'stats' : 'public') + '/details/'+dept+'/'+metric.psofia_recordid })//, query: { id: id }})
-			}
-		},
-
-		setFilter(id, filter, attr) {
-			this['filter'+id].attr = attr ? attr : ''
-			this['filter'+id].value = filter ? filter : ''
-			this.page = 1
-			this.progress = 100
-		},
-
-		setSorter(by) {
-			this.sorter.by = by
-			this.sorter.order = this.sorter.order*-1
-			this.page = 1
-			this.progress = 100
-		},
-
-		setMetricLocation(id, e) {
-			console.log(id, e.target.value)
 		},
 
 		startTimer() {
+			if(this.debug) console.log('startTimer')
 			this.timer = setInterval(function() {
 				this.progress -= 10
 				if (this.progress <= 0) this.setPage(this.page+1, false)
@@ -433,80 +510,238 @@ export default {
 		setPage(pg, sticky) {
 			this.progress = 100
 			if (sticky) {
-				clearInterval(this.timer)
+				if(this.timer) this.timer = clearInterval(this.timer)
 				this.autoplay = false
 			}
 			if (pg > this.splitMetrics.length) this.page = 1
 			if (pg <= this.splitMetrics.length && pg >= 1) this.page = pg
 		},
 
-		test(metric) {
-			console.log(metric)
-		}
+		gotoMetric(metric) {
+			if(this.isEditing) this.gotoMetricEdit(metric)
+			else{
+				var metricLinks = this.$store.getters.metricLinks(metric)
+				if(metricLinks.editOnly){
+					if(!this.isAdmin){
+						console.error('EDIT ONLY ROUTE')
+						return
+					}
+					else this.gotoMetricEdit(metric)
+				}
+				else{
+					var params = metricLinks.viewParams
+					if(this.isLandingPageCarousel || this.isStatsCarousel || this.isMetricsCarousel || metricLinks.viewRedirect){
+						var fullViewURL = metricLinks.viewURL + '/dashboard/' + params.location + '/details/' + params.dept + '/' + params.id
+						window.open(fullViewURL, '_blank');
+					}
+					else this.$router.push({ name: 'DetailsWithId', params: params })
+				}
+			}
+		},
+		gotoMetricEdit(metric) {
+			var metricLinks = this.$store.getters.metricLinks(metric)
+			this.$router.push({ name: 'DetailsWithIdEdit', params: metricLinks.editParams })
+		},
+		gotoMetricForm(metric) {
+			var metricLinks = this.$store.getters.metricLinks(metric)
+			window.open(metricLinks.formURL, '_blank');
+		},
+
+		setFilter(id, filter, attr) {
+			this.resetTimer()
+			this['filter'+id].attr = attr ? attr : ''
+			this['filter'+id].value = filter ? filter : ''
+			this.restartTimer()
+		},
+		setSorter(by) {
+			this.resetTimer()
+			if (this.sorter.by == by){
+				this.sorter.order = this.sorter.order*-1
+			}
+			else{
+				this.sorter.by = by
+				this.sorter.order = 1
+				if(by == 'CurrentColor' && this.routeName.toLowerCase() == 'donna') this.sorter.order = -1
+			}
+			this.restartTimer()
+		},
+		setDepartment(department) {
+			if(this.debug) console.log('setDepartment')
+			if (!department) return
+			this.resetTimer()
+			var fullCategory
+			if(typeof department === 'object'){
+				if(department.hasOwnProperty('id')) fullCategory = department
+				else fullCategory = this.$store.getters.fullCategory(department)
+			}
+			else{
+				console.error('ERROR - must send department object')
+				fullCategory = this.category_all
+			}
+			this.department = fullCategory
+			this.restartTimer()
+			if (this.saveSettings) this.saveSettings.callback(this.compid, department.display)
+		},
+
+		metricValue(metric, val) {
+			var metricValue = this.$store.getters.metricValue({metric: metric, val: val, short: true})
+			if(metricValue.error) return '[[error 1000]]'
+			else return metricValue.str
+		},
+		checkIfStat(metric){
+			if(this.onlyStats) return true
+			else if(this.onlyMetrics) return false
+			else return this.$store.getters.checkIfStat(metric)
+		},
+		getTextColor(metric){
+			if(this.checkIfStat(metric)) return 'grey-text'
+			else return metric.CurrentColor+'-text'
+		},
+		get_metricRouteLocation(metric){
+			return this.$store.getters.metricRouteLocation(metric)
+		},
+		getTypeOfText(metric){
+			return this.get_metricRouteLocation(metric).typeOf
+		},
+		getLocationText(metric){
+			return this.get_metricRouteLocation(metric).display
+		},
+		getStatusText(metric){
+			var status = this.$store.getters.metricStatus(metric)
+			if(!status) return '?'
+			else if(status == 'deployed') return 'Public'
+			else if(status == 'review') return 'Review'
+			else return 'Development'
+		},
+
+		// for refreshing
+		fetchLPCarousel() {
+			if(this.debug) console.log('Landing Page Carousel - fetch metrics')
+			this.$store.dispatch('clearLandingPageCarousel')
+			this.$store.dispatch('fetchLandingPageCarousel')
+		},
+
+		checkLocalStorage() {
+			try {
+				if (localStorage.getItem(this.saveSettings.localStorageKey)) {
+					var _root = JSON.parse(localStorage.getItem(this.saveSettings.localStorageKey))
+					if (_root.hasOwnProperty(this.compid)){
+						var departmentDisplay = _root[this.compid]
+						var savedDepartment = this.$store.findCategoryByDisplay({ type:'department', display: departmentDisplay})
+						if(!savedDepartment) this.department = this.category_all
+						else this.department = savedDepartment
+						this.isLoadingDept = false
+					}
+					else{
+						this.department = this.category_all
+						this.isLoadingDept = false
+					}
+				}
+				else{
+					this.department = this.category_all
+					this.isLoadingDept = false
+				}
+			} catch(e) {
+				console.error(e)
+				this.department = this.category_all
+				this.isLoadingDept = false
+			}
+		},
 	}
 }
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.donna td {
-	padding: 8px 5px;
+.pointy {
+	cursor: pointer;
 }
-
-.met-carousel td {
-	padding: 5px 5px;
+table.highlight > tbody > tr:hover {
+    background-color: rgba(0,0,0, 0.2);	/* grey */
+    cursor: pointer;
 }
-.met-carousel .btn, .met-carousel .progress .determinate, .met-carousel .switch label input[type=checkbox]:checked + .lever:after {
-	background-color: #5A348D;
-}
-.met-carousel .title {
-	background-color: #5A348D !important;
-}
-.met-carousel li a.active {
-	background-color: #73529E !important;
-}
-.met-carousel .progress {
-	background-color: #CEC2DD;
-}
-.met-carousel .switch label input[type=checkbox]:checked + .lever{
-	background-color: #AD9AC6;
-}
-.met-carousel .pagination li.active {
-	background-color: #9FC24C;
-}
-.met-carousel .dropdown-content li > a {
-	color: #5A348D;
-}
-.met-carousel th {
-	color: #5A348D !important;
-}
-.met-carousel .title, .met-carousel .title small {
-	color: #FFF !important;
-}
-
 .background {
 	height: 100%;
 	padding: 16px 24px;
 	position: relative;
 	overflow-x: scroll;
 }
-.pointy {
-	cursor: pointer;
-}
 .title {
 	font-size: 1.4rem;
 	font-family: 'Product Sans';
 	padding: 8px 16px;
-}
-table.highlight > tbody > tr:hover {
-    background-color: rgba(0,0,0, 0.2);
-    cursor: pointer;
 }
 table td.value {
 	font-family: 'Product Sans';
 	font-weight: bold;
 	font-size: 1.25rem;
 }
+table > tbody > tr > td a {
+	padding: 0 16px;
+}
+
+/* buttons */
+.switch label input[type=checkbox]:checked + .lever{
+	background-color: #AD9AC6;	/*light purple*/
+}
+.btn, .btn-flat, .switch label input[type=checkbox]:checked + .lever:after {
+	background-color: #5A348D; /*col purple*/
+	color: white;
+}
+.btn-flat.active {
+    background-color: #3c225d;
+    color: white;
+}
+.edit-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+}
+
+/* dropdowns */
+.dropdown-content li > a, .dropdown-content li > span {
+	color: #5A348D;		/*col purple*/
+}
+/*.dropdown-content li.active {
+	background-color: #9FC24C;	 med green
+}*/
+.dropdown-content li:hover, .dropdown-content li.active:hover{
+  background-color: rgba(0,0,0, 0.2);	/* grey */
+}
+
+/* filters */
+.filters {
+	margin-right: 16px;
+	display: inline-block;
+}
+.filter {
+	margin: 0 16px 32px 16px;
+	display: inline-block;
+}
+.filter a {
+	margin-top: 4px;
+}
+
+/* pages */
+.page-system .pagination li.active {
+	background-color: #9FC24C;	/* med green */
+}
+.progress {
+	background-color: #CEC2DD; /*lightest purple*/
+}
+.page-system {
+	user-select: none;
+}
+.page-system .pagination, .page-system .autoplay {
+	display: inline-block;
+}
+.progress .determinate {
+	background-color: #5A348D;	/*col purple*/
+	transition: none !important;
+	-webkit-transition: none !important;
+}
+
+/* loading */
 .loader {
     border: 6px solid #D1C4E9;
     border-top: 6px solid #673AB7;
@@ -516,49 +751,43 @@ table td.value {
     animation: spin 2s linear infinite;
     display: inline-block;
 }
-
+i.material-icons.active {
+	animation: spin 2s linear infinite;
+}
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-.edit-button {
-	position: absolute;
-	top: 0;
-	right: 0;
+/* transitions */
+.fade-enter-active, .fade-leave-active {
+  transition: all 0.5s;
 }
-li a.active {
-	background-color: #512da8 !important;
-	color: white !important;
+.fade-enter, .fade-leave-to{
+  opacity: 0;
+  transform: translate3d(0, 100px,0);
 }
-.btn-flat.active {
-    background-color: #512da8 !important;
-    color: white !important;
+.slideup-transition {
+	transition: transform 5s ease-in-out;
 }
-.collapsible, .collapsible-body, .collapsible-header {
-	border: none;
+.slideup-enter, .slideup-leave {
+	transform: translate3d(0, -100px, 0);
 }
-.filters {
-	display: inline-block;
-	margin-right: 16px;
+
+
+.donna table > thead > tr > th, .donna table > tbody > tr > td {
+	padding: 8px 5px !important;
 }
-.filter {
-	margin: 0 16px 32px 16px;
-	display: inline-block;
+.lp-carousel table > thead > tr > th, .lp-carousel table > tbody > tr > td {
+	padding: 5px 5px !important;
 }
-.filter a {
-	margin-top: 4px;
+
+/* colors */
+.col-purple {
+    background-color: #5A348D !important;
+    color: white;
 }
-td a {
-	padding: 0 16px !important
+.col-purple-text{
+	color: #5A348D !important;
 }
-.page-system {
-	user-select: none;
-}
-.page-system .pagination, .page-system .autoplay {
-	display: inline-block;
-}
-.progress .determinate {
-	transition: none !important;
-	-webkit-transition: none !important;
-}
+
 </style>

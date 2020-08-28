@@ -7,11 +7,11 @@
 				    <div class="brand-logo white-text text-darken-3">City of Lewisville</div>
 				    <ul class="right">
 				    	<li v-if="!underLarge">
-				    		<SearchMetricsBar :nav="true" :compid="'nav-search'" />
+				    		<SearchMetricsBar :config="navsearchconfig" />
 				    	</li>
 				    	<li>
 				    		<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
-				    			<i class="material-icons" :class="{ active : $store.state.softReloading }">refresh</i>
+				    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
 				    		</a>
 				    	</li>
 				    </ul>
@@ -26,12 +26,12 @@
 			<main v-if="!isLoading">
 				<div class="row" shortcut>
 					<div class="col s12 l8 xl4 refresh-text left-align valign-wrapper">
-						<SearchMetricsBar :compid="'small-search'" v-if="underLarge" />
+						<SearchMetricsBar :config="searchconfig" v-if="underLarge" />
 						<div id="updating-loader" class="small spinner" v-if="isRefreshing">
 							<div class="double-bounce1"></div>
 							<div class="double-bounce2"></div>
 						</div>
-						<div class="updating" :class="{ 'nudge-right': underLarge }" v-if="isRefreshing || isLoading">
+						<div class="updating" :class="{ 'nudge-right': underLarge }" v-if="isRefreshing">
 							Updating...
 						</div>
 						<div :class="{ 'nudge-right': underLarge }" v-else>
@@ -80,37 +80,38 @@
 
 <script>
 import Moment from 'moment'
-import GoalsPie from '../widgets/GoalsPie'
-import GoalsPie2 from '../widgets/GoalsPie2'
-import MetricsByDeptBarChart from '../widgets/MetricsByDeptBarChart'
-import FixedNavBar from '../widgets/FixedNavBar'
-import HistoryGraph from '../widgets/HistoryGraph'
-import HistoryGraph2 from '../widgets/HistoryGraph2'
-import DualHistoryGraph from '../widgets/DualHistoryGraph'
-import DualHistoryGraph2 from '../widgets/DualHistoryGraph2'
 import ListOfMetrics from '../widgets/ListOfMetrics'
 import KPI from '../widgets/KPI'
 import SearchMetricsBar from '../widgets/SearchMetricsBar'
-import MetricCard from '../widgets/MetricCard'
-import ESRIMap from '../widgets/ESRIMap'
-import GoogleMap from '../widgets/GoogleMap'
-import TextBox from '../widgets/TextBox'
 import DepartmentsDropdown from '../widgets/DepartmentsDropdown'
 export default {
 	name: 'Stats',
 	components: {
-		GoalsPie, GoalsPie2, MetricsByDeptBarChart, FixedNavBar, HistoryGraph, HistoryGraph2, DualHistoryGraph, DualHistoryGraph2, ListOfMetrics, KPI, SearchMetricsBar, MetricCard, ESRIMap, GoogleMap, TextBox, DepartmentsDropdown
+		ListOfMetrics, KPI, SearchMetricsBar, DepartmentsDropdown
 	},
 	props: [],
+	beforeRouteUpdate (to, from, next) {
+		if(this.debug) console.log('Stats - beforeRouteUpdate')
+        if(!this.isStats) next({ name: 'Default' })
+        else next()
+	},
 	data () {
 		return {
+			debug: true,
+			params: {
+				sitename: 'stat',
+				status: 'deployed',
+				type: '',
+				master: ''
+			},
+
 			id: 'l3',
-			searchTerm: '',
-			underLarge: false,
 			saveSettings: {
 				callback: this.saveLayout,
 				localStorageKey: 'l3'
 			},
+			searchconfig:{ compid: 'small-search', nav: false, editing: false, },
+			navsearchconfig:{ compid: 'nav-search', nav: true, editing: false, },
 			config1: {
 				compid: 'g1-kpi',
 				recordnumber: '9CDBACA381ED4822A98E701675506CB2',
@@ -149,51 +150,54 @@ export default {
 	},
 
 	computed: {
-		isLoading() {
-			return this.$store.state.isLoading
-		},
-		isRefreshing() {
-			return this.$store.state.softReloading
-		},
-		refreshedAt() {
-			return this.$store.state.fromNow
-		}
+		isLoading() { return this.$store.state.isLoading },
+		isRefreshing() { return this.$store.state.softReloading },
+		refreshedAt() { return this.$store.state.fromNow },
+		underLarge() { return this.$store.state.underLarge },
+		isStats() { return this.$store.getters.isStats },
+		// debug only
+		categoriesLoading(){ return this.$store.getters.isLoading_categories },
 	},
 
 	watch: {
+		isLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('isLoading: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
+		isRefreshing:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('isRefreshing: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
+		categoriesLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('categoriesLoading: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
 	},
 
 	mounted() {
-		this.$store.commit('setSite', 'stats')
-		this.setSize()
-		$(window).resize(this.setSize)
+		if(this.debug) console.log('Mounted')
+		this.updateFetchParams()
 	},
-
 	beforeDestroy() {
-		$(window).off('resize')
+		if(this.debug) console.log('Destroy')
 	},
 
 	methods: {
-
-		setSize() {
-			this.underLarge = ($(window).width() < 1200) ? true : false
+		updateFetchParams() {
+			var payload = { params: this.params }
+			if(this.debug) console.log('Update fetch params')
+			this.$store.dispatch('updateFetchParams', payload)
 		},
-
-		// uses store to fetch metrics
 		fetchMetrics() {
-
-			// specifies which metrics to fetch
-			var _params = {
-				public: 0,
-				internal: 0,
-				stat: 1,
-				status: 'deployed',
-				type: '',
-				master: ''
-			}
-
-			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
+			if(this.debug) console.log('Fetch metrics')
+			this.$store.commit('clearMetrics')
+			this.$store.dispatch('fetchPerfMeasures')
 		},
 
 		// used for backing up the layout -- ugly / hard to follow

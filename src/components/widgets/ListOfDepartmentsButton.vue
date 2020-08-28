@@ -1,16 +1,17 @@
 <template>
-	<div :id="compid">
-		<a
-			:id="compid + '-dropdown-button'"
-			class="dropdown-button btn-flat grey-text waves-effect waves-light"
-			:data-activates="compid + '-departments-dropdown'"
-			@click="openDropdown()">
+	<div :id="compid + '-container'" class="outer">
+		<a :id="compid" :data-activates="compid + '-content'" :disabled="departmentsLoading"
+			class="dropdown-button btn-flat grey-text waves-effect waves-light">
 			<i class="material-icons right">mode_edit</i>
 		</a>
 
-		<ul :id="compid + '-departments-dropdown'" class="dropdown-content">
+		<ul :id="compid + '-content'" class="dropdown-content">
+			<li>
+				<a @click="callback(category_all)">All Departments</a>
+			</li>
+			<li class="divider"></li>
 			<li v-for="department in departments">
-				<a @click="callback(department)">{{ department }}</a>
+				<a @click="callback(department)">{{ department.display }}</a>
 				<div class="divider"></div>
 			</li>
 		</ul>
@@ -21,47 +22,89 @@
 import Vue from 'vue'
 export default {
 	name: 'ListOfDepartmentsButton',
-	props: ['compid', 'callback'],
+	components: {},
+	props: {
+		config: {
+			type: Object,
+			required: false,
+		},
+		// used by ListOfMetrics
+		filteredDepartments:{
+			type: Array,
+			required: false,
+			default: null,
+		},
+		// return selected department to callback
+		callback:{
+			type: Function,
+			required: true,
+		}
+	},
 	data () {
-		return {}
+		return {
+			debug: true,
+			needsInit: true,
+			isOpen: false,
+		}
 	},
 
 	computed: {
-		departments() {
-			var depts = ['All Departments'].concat(this.$store.state.departments.map(dept => dept.bmpdisplayname).sort())
-			return depts
-			// this.$store.state.metrics.forEach(metric => {
-			// 	var exists = false
-			// 	depts.forEach(cat => {
-			// 		if (cat == metric.Department) exists = true
-			// 	})
-			// 	if (!exists) depts.push(metric.Department)
-			// })
-			// return depts.sort((a,b) => {
-			// 	if (a < b) return -1
-			// 	if (a > b) return 1
-			// 	return 0
-			// })
-		}
+		category_all(){ this.$store.state.categoryAll },
+		storeIsLoading() { return this.$store.state.isLoading },
+		storeIsRefreshing() { return this.$store.state.softReloading },
+		departmentsLoading(){ return this.$store.getters.isLoading_categories },
+		allDepartments() { return this.$store.getters.categoriesByType('department') },
+
+		compid(){
+			if(this.config && this.config.hasOwnProperty('compid')) return this.config.compid
+			else return 'listdeptdropdown'
+		},
+
+		// props may include filtered departments to use instead of all departments (ex ListOfMetrics only shows departments with query metrics)
+		departments(){
+			if(this.filteredDepartments) return this.filteredDepartments
+			else return this.allDepartments
+		},
+		// departments length will be 0 on initial load
+		countDepartments(){ return this.departments.length },
 	},
 
 	watch: {
-		departments() {
-			$('#'+this.compid + '-dropdown-button').dropdown({ constrainWidth: false })
-		}
+		// dropdown only needs to init/update on department length change
+		countDepartments:{
+			immediate: true,
+			handler(newVal, oldVal) {
+				if( newVal > 0){
+					// on initial load initialize the dropdown
+					if(this.needsInit) Vue.nextTick(this.initDropdown)
+					// on future length changes, resize the dropdown (if open? - can't check bc don't have access to instance? var instance = M.Dropdown.getInstance(elem);)
+					else if(newVal != oldVal) Vue.nextTick(this.updateDropdown)
+				}
+			},
+		},
 	},
 
-	mounted() {},
+	mounted() {
+		if(this.debug) console.log('Mounted')
+	},
+	beforeDestroy() {
+		if(this.debug) console.log('Destroy')
+		$('#' + this.compid).dropdown('destroy')
+	},
 
 
 	methods: {
-		// activate dropdown menu
-		openDropdown() {
-			$('#'+this.compid + '-dropdown-button').dropdown({ constrainWidth: false })
-			Vue.nextTick(() => {
-				$('#'+this.compid + '-dropdown-button').dropdown('open')
-			})
-		}
+		initDropdown(){
+			if(this.debug) console.log('initDropdown')
+			$('#' + this.compid).dropdown({ constrainWidth: false, closeOnClick: true, onOpenStart: this.setOpen, onCloseStart: this.setClose })
+			this.needsInit = false;
+		},
+		updateDropdown(){
+			if(this.debug) console.log('updateDropdown')
+			$('#' + this.compid).dropdown('recalculateDimensions')
+		},
+		setOpen() { this.isOpen = true },
+		setClose() { this.isOpen = false },
 	}
 }
 </script>

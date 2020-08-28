@@ -6,44 +6,63 @@
 				    <div class="logo"></div>
 				    <div class="brand-logo white-text text-darken-3">City of Lewisville - <small>"Admin"</small></div>
 				    <ul class="right">
+				    	<li v-if="!underLarge">
+				    		<SearchMetricsBar :config="navsearchconfig" />
+				    	</li>
 				    	<li>
 				    		<a @click="reset" data-position="left" data-delay="100" data-tooltip="Reset page to defaults" class="tooltipped">
 				    			<i class="material-icons">clear_all</i>
 				    		</a>
 				    	</li>
 				    	<li>
-				    		<a @click="fetchMetrics">
-				    			<i class="material-icons" :class="{ active : $store.state.isLoading }">refresh</i>
+				    		<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
+				    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
 				    		</a>
 				    	</li>
 				    </ul>
 				</div>
 			</nav>
 		</div>
-		<div class="row">
-			<div class="col s12 l8 xl4">
-				<SearchMetricsBar />
-				<div class="col s12 left-align" v-if="softReloading">
-					Updating...
+		<div class="spinner" v-if="isLoading">
+			<div class="double-bounce1"></div>
+			<div class="double-bounce2"></div>
+		</div>
+		<transition appear name="fade">
+			<main v-if="!isLoading">
+				<div class="row">
+					<div class="col s12">
+						<SearchMetricsBar :config="searchconfig" v-if="underLarge" />
+					</div>
+					<div class="col s12 l8 xl4 refresh-text left-align valign-wrapper">
+						<div id="updating-loader" class="small spinner" v-if="isRefreshing">
+							<div class="double-bounce1"></div>
+							<div class="double-bounce2"></div>
+						</div>
+						<div class="updating" :class="{ 'nudge-right': underLarge }" v-if="isRefreshing || isLoading">
+							Updating...
+						</div>
+						<div :class="{ 'nudge-right': underLarge }" v-else>
+							Updated {{ refreshedAt }}.
+						</div>
+					</div>
+					<div class="s12">
+					</div>
 				</div>
-				<div class="col s12 left-align" v-else>
-					Updated {{ refreshedAt }}.
+				<div class="row">
+					<div class="col s12 xl2 grid left-align" id="g0">
+						<GoalsPie :config="config0" />
+					</div>
+					<div class="col s12 xl10 grid left-align" id="g1">
+						<MetricsByDeptBarChart :config="config1" />
+					</div>
 				</div>
-			</div>
-		</div>
-		<div class="row">
-			<div class="col s12 xl2 grid left-align" id="g0">
-				<GoalsPie :config="config0" />
-			</div>
-			<div class="col s12 xl10 grid left-align" id="g1">
-				<MetricsByDeptBarChart />
-			</div>
-		</div>
-		<div class="row">
-			<div class="col s12 grid" id="g7">
-				<ListOfMetrics :compid="config7.compid" :admin="true" />
-			</div>
-		</div>
+				<div class="row">
+					<div class="col s12 grid" id="g2">
+						<ListOfMetrics :config="config2" />
+					</div>
+				</div>
+			</main>
+		</transition>
 	</div>
 </template>
 
@@ -51,112 +70,94 @@
 import Moment from 'moment'
 import GoalsPie from '../widgets/GoalsPie'
 import MetricsByDeptBarChart from '../widgets/MetricsByDeptBarChart'
-import FixedNavBar from '../widgets/FixedNavBar'
-import HistoryGraph from '../widgets/HistoryGraph'
 import ListOfMetrics from '../widgets/ListOfMetrics'
-import KPI from '../widgets/KPI'
 import SearchMetricsBar from '../widgets/SearchMetricsBar'
-import MetricCard from '../widgets/MetricCard'
 export default {
 	name: 'Admin',
 	components: {
-		GoalsPie, MetricsByDeptBarChart, FixedNavBar, HistoryGraph, ListOfMetrics, KPI, SearchMetricsBar, MetricCard
+		GoalsPie, MetricsByDeptBarChart, ListOfMetrics, SearchMetricsBar
 	},
 	props: [],
 	data () {
 		return {
+			debug: true,
+			params: {
+				status: '',
+				type: '',
+				master: 'all'
+			},
+
 			id: 'l3',
-			searchTerm: '',
 			saveSettings: {
 				callback: this.saveLayout,
 				localStorageKey: 'l3'
 			},
+			searchconfig:{ compid: 'small-search', nav: false, editing: false, admin: true },
+			navsearchconfig:{ compid: 'nav-search', nav: true, editing: false, admin: true },
 			config0: {
 				compid: 'g0-pie',
 				noBackground: false,
 				// dept: 'Public Services'
 			},
-			config1: {
-				compid: 'g1-graph',
-				title: 'Avg Response Time to Priority 1 Police Calls',
-				uspName: 'PD_ResponseTime_Priority1',
-				editable: true
+			config1:{
+				compid: 'g1-bar',
 			},
 			config2: {
-				compid: 'g2-graph',
-				title: 'Avg Response Time to Priority 1 Fire Calls',
-				uspName: 'FD_Priority1CFS_ReceivedToOnScene',
+				compid: 'g2-list',
+				admin: true,
 				editable: true
-			},
-			config3: {
-				compid: 'g3-kpi',
-				recordnumber: 'E50DE06691B64C91807922E5CA81A1C2'
-			},
-			config4: {
-				compid: 'g4-kpi',
-				recordnumber: '67132D86712A4C44BC646FCA805CDABD'
-			},
-			config5: {
-				compid: 'g5-kpi',
-				recordnumber: 'C39AFD87551E4254B24D7CA82DA828F3'
-			},
-			config6: {
-				compid: 'g6-kpi',
-				recordnumber: '06379955A0DB45A58396317593944133'
-			},
-			config7: {
-				compid: 'g7-list'
-			},
-			refreshedAt: ''
+			}
 		}
 	},
 
 	computed: {
-		isLoading() {
-			return this.$store.state.metrics.length == 0
-		},
-		softReloading() {
-			return this.$store.state.softReloading
-		}
+		isLoading() { return this.$store.state.isLoading },
+		isRefreshing() { return this.$store.state.softReloading },
+		refreshedAt() { return this.$store.state.fromNow },
+		underLarge() { return this.$store.state.underLarge },
+		categoriesLoading(){ return this.$store.getters.isLoading_categories },
 	},
 
 	watch: {
-		'$store.state.metrics'() {
-			this.updateRefreshedAt()
-		}
+		isLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('isLoading: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
+		isRefreshing:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('isRefreshing: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
+		categoriesLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('categoriesLoading: ' + oldVal  + ' -> ' + newVal)
+			},
+		},
 	},
 
 	mounted() {
-		if(this.$store.state.metrics.length == 0) this.fetchMetrics()
-		setInterval(() => {
-			this.updateRefreshedAt()
-		}, 5000)
+		if(this.debug) console.log('Mounted')
+		this.updateFetchParams()
+	},
+	beforeDestroy() {
+		if(this.debug) console.log('Destroy')
 	},
 
 	methods: {
-
-		// fetch all working metrics
+		updateFetchParams() {
+			var payload = { params: this.params }
+			if(this.debug) console.log('Update fetch params')
+			this.$store.dispatch('updateFetchParams', payload)
+		},
 		fetchMetrics() {
+			if(this.debug) console.log('Fetch metrics')
 			this.$store.commit('clearMetrics')
-			// specifies which metrics to fetch
-			var _params = {
-				public: 0,
-				internal: 0,
-				stat: 0,
-				status: '',
-				type: '',
-				master: 'all'
-			}
-
-			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
+			this.$store.dispatch('fetchPerfMeasures')
 		},
-
-		updateRefreshedAt() {
-			if (this.$store.state.lastRefreshed) this.refreshedAt = Moment(this.$store.state.lastRefreshed).fromNow()
-			else this.refreshedAt = ''
-		},
-
 		// used for backing up the layout
 		saveLayout(key, value) {
 			try {
@@ -173,9 +174,6 @@ export default {
 			localStorage.removeItem('l3')
 			location.reload()
 		},
-		test() {
-			console.log(this.$store.state)
-		}
 	}
 }
 </script>
@@ -206,6 +204,17 @@ export default {
     opacity: 1;
     margin: 0 16px;
 }
+
+
+.fade-enter-active, .fade-leave-active {
+  transition: all 0.5s;
+}
+.fade-enter, .fade-leave-to{
+  opacity: 0;
+  transform: translate3d(0, 100px,0);
+}
+
+
 nav i.material-icons.active {
 	animation: spin 2s linear infinite;
 }

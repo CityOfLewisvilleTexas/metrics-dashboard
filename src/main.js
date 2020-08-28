@@ -4,8 +4,9 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import { store } from './store.js'
+Vue.prototype.$location = window.location;
 
-Vue.config.productionTip = false
+Vue.config.productionTip = true
 
 new Vue({
   el: '#app',

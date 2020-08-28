@@ -1,52 +1,92 @@
 <template>
-	<div>
-		<a class="dropdown-button btn" data-activates="departments-dropdown">
+	<div :id="compid + '-container'" class="outer">
+		<a :id="compid" :data-activates="compid + '-content'" :disabled="departmentsLoading"
+			class="dropdown-button btn">
 			<i class="material-icons right">keyboard_arrow_down</i>Departments
 		</a>
-		<ul id="departments-dropdown" class="dropdown-content">
-			<li v-for="dept in departments"><a :href="linkToDept(dept)">{{ dept.bmpdisplayname }}</a></li>
+		<ul :id="compid + '-content'" class="dropdown-content">
+			<li v-for="dept in departments"><a @click="gotoDept(dept)">{{ dept.display }}</a></li>
 		</ul>
 	</div>
 </template>
 
 <script>
+import Vue from 'vue'
 export default {
 	name: 'DepartmentsDropdown',
-	components: {
+	components: {},
+	props: {
+		config: {
+			type: Object,
+			required: false,
+		},
 	},
-	props: ['config'],
 	data () {
 		return {
+			debug: true,
+			needsInit: true,
+			isOpen: false,
 		}
 	},
 
 	computed: {
-		departments() {
-			return this.$store.state.departments.sort((a,b) => {
-				if (a.bmpdisplayname < b.bmpdisplayname) return -1
-				if (a.bmpdisplayname > b.bmpdisplayname) return 1
-				return 0
-			})
-		}
+		locationParam() { return this.$route.params.location },
+
+		storeIsLoading() { return this.$store.state.isLoading },
+		storeIsRefreshing() { return this.$store.state.softReloading },
+		departmentsLoading(){ return this.$store.getters.isLoading_categories },
+
+		compid(){
+			if(this.config && this.config.hasOwnProperty('compid')) return this.config.compid
+			else return 'deptdropdown'
+		},
+
+		departments() { return this.$store.getters.categoriesByType('department') },
+		// departments length will be 0 on initial load
+		countDepartments(){ return this.departments.length },
 	},
 
 	watch: {
+		// dropdown only needs to init/update on department length change
+		countDepartments:{
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(newVal > 0){
+					// on initial load initialize the dropdown
+					if(this.needsInit) Vue.nextTick(this.initDropdown)
+					// on future length changes, resize the dropdown if open
+					else if(this.isOpen) Vue.nextTick(this.updateDropdown)
+				}
+			},
+		},
 	},
 
-	// START HERE
 	mounted() {
-		$('.dropdown-button').dropdown()
+		if(this.debug) console.log('Mounted')
 	},
-
-	// called as component is removed
 	beforeDestroy() {
+		if(this.debug) console.log('Destroy')
+		$('#' + this.compid).dropdown('destroy')
 	},
 
 	methods: {
-		linkToDept(dept) {
-			var site = this.$store.state.site == 'stats' ? 'stats' : 'public'
-			return './#/dashboard/' + site + '/details/' + dept.bmpdisplayname.replace(/ /g, '').toLowerCase()
-		}
+		initDropdown(){
+			if(this.debug) console.log('initDropdown')
+			$('#' + this.compid).dropdown({ onOpenStart: this.setOpen, onCloseStart: this.setClose })
+			this.needsInit = false;
+		},
+		// update dropdown dimensions
+		updateDropdown(){
+			if(this.debug) console.log('updateDropdown')
+			$('#' + this.compid).dropdown('recalculateDimensions')
+		},
+		// go to same location deployed view (admin redirects to edit deployed view)
+		gotoDept(department) {
+			var params = {location: this.locationParam, dept: department.deptParam}
+			this.$router.push({ name: 'Details', params: params })
+		},
+		setOpen() { this.isOpen = true },
+		setClose() { this.isOpen = false },
 	}
 }
 </script>

@@ -15,7 +15,7 @@
 <script>
 import Vue from 'vue'
 import axios from 'axios'
-import moment from 'moment'
+import Moment from 'moment'
 import ListOfMetricsButton from '../widgets/ListOfMetricsButton'
 export default {
 	name: 'LineChart',
@@ -153,7 +153,7 @@ export default {
 				return 0
 			})
 			.forEach(row => {
-				// chartdata.push([new Date(moment(row.date.slice(0,10), 'YYYY-MM-DD').format('MM-DD-YYYY')), (isPercent) ? row.value * 100 : row.value])
+				// chartdata.push([new Date(Moment(row.date.slice(0,10), 'YYYY-MM-DD').format('MM-DD-YYYY')), (isPercent) ? row.value * 100 : row.value])
 				chartdata.push([row.date.slice(0,10), (isPercent) ? row.value * 100 : row.value])
 			})
 

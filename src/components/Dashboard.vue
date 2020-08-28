@@ -13,64 +13,41 @@ export default {
 
   components: {},
 
-  mounted() {
-    // if stats domain, redirect ot the stats page
-    // if (location.href.indexOf('stats.cityoflewisville.com') != -1 && ) {
-    //   this.$router.push({path: '/dashboard/stats'})
-    // }
-    this.setSite()
-    this.setSize()
-  },
-
   data () {
     return {
-      ready: true
+      ready: true,
+      debug: true,
     }
   },
 
   computed: {
-    site() {
-      return this.$store.state.site
-    }
   },
 
   watch: {
-    site() {
-      this.goToSite()
-    }
+  },
+
+  mounted() {
+    if(this.debug) console.log('Mounted')
+    this.setSize()
+    $(window).resize(this.setSize)
+    google.charts.load('current', {'packages':['gauge', 'table']})
+    google.charts.setOnLoadCallback(this.setGoogleChartsLoaded)
+  },
+
+  beforeDestroy() {
+    if(this.debug) console.log('Destroy')
+    $(window).off('resize')
   },
 
   methods: {
     setSize() {
-      this.$store.commit('setSize')
+      var width = $(window).width()
+      var height = $(window).height()
+      this.$store.commit('setSize', {width: width, height: height})
     },
-    setSite() {
-      var site = location.href.indexOf('stats.cityoflewisville.com') == -1 ? 'metrics' : 'stats'
-      this.$store.commit('setSite', site)
-    },
-
-    goToSite() {
-      // specifies metrics to get
-      var _params = {
-        public: this.site == 'stats' ? 0 : 1,
-        internal: 0,
-        stat: this.site == 'stats' ? 1 : 0,
-        sitename: this.site == 'stats' ? 'stat': 'metricPublic',
-        status: 'deployed',
-        type: '',
-        master: ''
-      }
-
-      // call fetch on Store, exclude carousel page
-      if(this.$route.fullPath.indexOf('carousel') == -1 && this.$route.fullPath.indexOf('admin') == -1){  /* clarson - include admin? */
-        console.log('initial fetch')
-        this.$store.dispatch('fetchMetrics', _params)
-      }
-
-      var sitename = this.site == 'stats' ? 'stats' : location.href.indexOf('donna')!=-1 ? 'donna' : location.href.indexOf('details')!=-1 ? '' : ''
-      // if (sitename != '') this.$router.push({ path: '/dashboard/'+sitename })
+    setGoogleChartsLoaded(){
+      this.$store.commit('setGoogleChartsLoaded')
     }
-
   }
 }
 </script>

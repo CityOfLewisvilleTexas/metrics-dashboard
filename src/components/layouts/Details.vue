@@ -1,159 +1,278 @@
 <template>
-	<div id="container">
-		<div class="navbar-fixed">
-            <nav>
-				<div id="top-nav" class="nav-wrapper col-purple left-align">
-				    <a href="#" data-activates="slide-out" id="details-side" class="button-collapse"><i class="material-icons">menu</i></a>
-				    <div class="logo"></div>
-				    <div class="brand-logo white-text text-darken-3">City of Lewisville</div>
-				    <ul class="right">
-						<li v-if="filteredStats.length > 0">
-							<a href="#stats_carousel"> stats</a>
-						</li>
-				    	<li v-if="editing">
-				    		<!-- <a class="btn amber black-text" @click="setWorking(1)" v-if="!working">
-				    			working
-				    		</a>
-				    		<a class="btn amber black-text" @click="setWorking(0)" v-else>
-				    			normal
-				    		</a> -->
-				    		<select class="browser-default" v-model="metricLocation">
-				    			<option>Public</option>
-				    			<option>Review</option>
-				    			<option>Development</option>
-				    		</select>
-				    	</li>
-				    	<li v-if="!underLarge">
-				    		<!--<router-link class="btn amber black-text" :to="{ name: 'Default' }">
-				    			<span>dashboard</span>
-				    		</router-link>-->
-							<a class="btn amber black-text" :href="landingURL">
-				    			<span>dashboard</span>
-				    		</a>
-				    	</li>
-				    	<!-- <li>
-				    		<a data-position="left" data-delay="100" data-tooltip="Reset page to defaults" class="tooltipped">
-				    			<i class="material-icons">clear_all</i>
-				    		</a>
-				    	</li> -->
-				    	<li>
-				    		<a @click="fetchMetrics(true)">
-				    			<i class="material-icons" :class="{ active : $store.state.isLoading }">refresh</i>
-				    		</a>
-				    	</li>
-				    </ul>
-				</div>
-			</nav>
-		</div>
+	<div>
+		<header>
+			<div class="navbar-fixed">
+				<nav>
+					<div id="top-nav" class="nav-wrapper col-purple left-align">
+						<a data-activates="slide-out" id="details-side-nav" class="button-collapse"><i class="material-icons">menu</i></a>
+						<div class="logo"></div>
+						<div class="brand-logo white-text text-darken-3">City of Lewisville</div>
+						<ul class="right">
+							<li v-if="showCarousel">
+								<a @click="scrollToCarousel('#details_carousel')">{{carouselType == 'statsCarousel' ? 'Stats' : 'Metrics'}}</a>
+							</li>
+							<li v-if="isEditing">
+								<select class="browser-default" v-model="showStatusParam">
+									<option v-for="routeStatus in filteredRouteStatuses" :value="routeStatus.statusParam">{{ routeStatus.display }}</option>
+								</select>
+							</li>
+							<li v-if="!underLarge">
+								<a class="btn amber black-text" :href="landingURL">
+									<span>dashboard</span>
+								</a>
+							</li>
+							<li>
+								<a @click="fetchMetrics">
+									<i class="material-icons" :class="{ active : storeIsRefreshing }">refresh</i>
+								</a>
+							</li>
+						</ul>
+					</div>
+				</nav>
+			</div>
 
-	    <main>
-		<ul id="slide-out" class="side-nav fixed z-depthx-4">
-			<li class="search">
-				<SearchMetricsBar class="searchbar" :compid="'small-search'" />
-			</li>
-			<li class="divider"></li>
-			<li class="header">Departments</li>
-			<!-- <li class="pointy left-align" @click="setCat({ bmpdisplayname: 'All' })" :class="{ 'blue-grey darken-1' : 'All' == currentCat.display }">
-				<a :class="{ 'white-text' : 'All' == currentCat.display }">
-					All
-					<span class="right">{{ metrics.length }}</span>
-				</a>
-			</li> -->
-			<li v-for="dept in departments" class="pointy left-align" @click="setCat(dept)" :class="{ 'blue-grey darken-1' : dept.bmpdisplayname == currentCat.display }">
-				<a :class="{ 'white-text' : dept.bmpdisplayname == currentCat.display }">
-					{{ dept.bmpdisplayname }}
-					<span class="right">{{ countOf(dept, 'd') }}</span>
-				</a>
-			</li>
-			<li class="divider"></li>
-			<li class="header">City Priorities</li>
-			<li v-for="priority in citypriorities" class="pointy left-align" @click="setCat(priority)" :class="{ 'blue-grey darken-1' : priority.bmpdisplayname == currentCat.display }">
-				<a :class="{ 'white-text' : priority.bmpdisplayname == currentCat.display }">
-					{{ priority.bmpdisplayname }}
-					<span class="right">{{ countOf(priority, 'p') }}</span>
-				</a>
-			</li>
-			<li class="divider"></li>
-			<li class="header">Big Moves</li>
-			<li v-for="move in bigmoves" class="pointy left-align" @click="setCat(move)" :class="{ 'blue-grey darken-1' : move.bmpdisplayname == currentCat.display }">
-				<a :class="{ 'white-text' : move.bmpdisplayname == currentCat.display }">
-					{{ move.bmpdisplayname }}
-					<span class="right">{{ countOf(move, 'b') }}</span>
-				</a>
-			</li>
-	    </ul>
-	    	<div class="row second-nav">
-	    		<div class="col s12 white left-align">
-	    			<div class="deptname blue-grey-text text-darken-2">
-	    				{{ currentCat.display }}
-	    				<small class="grey-text"> ({{ filteredMetrics.length }})</small>
-	    			</div>
-	    		</div>
-	    		<ul class="right">
-			    	<li v-if="underLarge">
-			    		<!--<router-link class="btn amber black-text" :to="{ name: 'Default' }">
-			    			<span>dashboard</span>
-			    		</router-link>-->
+			<ul id="slide-out" class="side-nav fixed">
+				<li class="search">
+					<SearchMetricsBar class="searchbar" :config="searchconfig" />
+				</li>
+				<li class="divider"></li>
+
+				<li v-if="isEditing" class="locations no-padding">
+					<ul>
+						<li class="header">Location</li>
+
+						<li v-if="allLocationsDisabled" class="header">{{ location_all.display }}<span class="right">{{ getCountByCategory(location_all) }}</span></li>
+
+						<li v-for="routeLocation in filteredRouteLocations" @click="setLocationParam(routeLocation)"
+							class="pointy left-align" :class="{ 'col-purple': (routeLocation.locationParam == locationParam) }">
+							<a :class="{ 'white-text': (routeLocation.locationParam == locationParam), 'col-purple-text': (routeLocation.locationParam != locationParam) }">
+								{{ routeLocation.display }}<span class="right">{{ getCountByLocation(routeLocation) }}</span>
+							</a>
+						</li>
+
+						<li class="divider"></li>
+					</ul>
+				</li>
+
+				<li class="categories no-padding">
+					<ul>
+						<li v-if="isEditing && allCategoriesDisabled" class="header">All Categories<span class="right">{{ getCountByCategory(category_all) }}</span></li>
+
+						<li v-for="category in filteredRouteDeptsByType(null)" @click="setDeptParam(category)"
+							class="pointy left-align" :class="{ 'col-purple': (category.deptParam == deptParam) }">
+							<a :class="{ 'white-text': (category.deptParam == deptParam), 'col-purple-text': (category.deptParam != deptParam) }">
+								{{ category.id == 'all' ? 'All Categories' : 'No Category' }}<span class="right">{{ getCountByCategory(category) }}</span>
+							</a>
+						</li>
+
+
+						<li v-for="categoryType in filteredCategoryTypes" class="categories no-padding">
+							<ul>
+								<li class="divider"></li>
+								<li class="header">{{categoryType.display}}</li>
+								<li v-for="category in filteredRouteDeptsByType(categoryType.type)" @click="setDeptParam(category)"
+									class="pointy left-align" :class="{ 'col-purple': (category.deptParam == deptParam) }">
+									<a :class="{ 'white-text': (category.deptParam == deptParam) }">
+										{{ category.display }}<span class="right">{{ getCountByCategory(category) }}</span>
+									</a>
+								</li>
+							</ul>
+						</li>
+					</ul>
+				</li>
+			</ul>
+		</header>
+
+		<main>
+			
+			<div class="row second-nav">
+				<div class="col s12 white left-align">
+					<!--<transition appear name="fade">-->
+						<div v-if="currentCategory && currentCategory.id != 'loading'" class="deptname blue-grey-text text-darken-2">
+							{{ currentCategory.display }}
+							<small class="grey-text"> ({{ countMetrics_shown }})</small>
+						</div>
+					<!--</transition>-->
+				</div>
+				<ul class="right">
+					<li v-if="isEditing && refreshedAt">Updated: {{refreshedAt}}</li>
+					<li v-if="underLarge">
 						<a class="btn amber black-text" :href="landingURL">
 							<span>dashboard</span>
 						</a>
-			    	</li>
-			    </ul>
-	    	</div>
-	    	<div class="row main">
-	    		<div class="spinner" v-if="isLoading">
-	    			<div class="double-bounce1"></div>
-	    			<div class="double-bounce2"></div>
-	    		</div>
-	    		<ul id="metric-list" class="row" v-else>
-			    	<li>
-			    		<div class="col s12 left-align" v-if="extraLink">
-			    			[See also: <a :href="extraLink.link" target="_blank">{{ extraLink.text }}</a>]
-			    		</div>
-			    	</li>
-	    			<li v-if="filteredMetrics.length == 0">
-	    				No metrics found here.
-	    			</li>
-	    			<li class="col s12 m10 l10 xl8 offset-m1 offset-l1 offset-xl2" v-for="metric in filteredMetrics">
-	    				<MetricCard :metric="metric" :editing="editing" />
-	    			</li>
-	    		</ul>
+					</li>
+				</ul>
+			</div>
 
-				<div class="divider" v-if="!isStats"></div>
-				<H2 v-if="filteredStats.length > 0 && !isStats">Stats</H2>
-				<div  v-if="filteredStats.length > 0 && !isStats" class="row" shortcut>
-					<!-- <div class="col s12 l6 xl4 nopad">
-					</div> -->
-					<div class="col s12 l12 xl10 offset-xl1 grid" id="g6">
-						<ListOfMetrics id="stats_carousel" :config="config6" :department="currentCat.display" />
-						<!-- :saveSettings="saveSettings" -->
+			<div class="container">
+
+				<div class="spinner main" v-if="isLoading">
+					<div class="double-bounce1"></div>
+					<div class="double-bounce2"></div>
+				</div>
+				<div class="row main">
+					<ul id="metric-list" class="row" v-if="!isLoading">
+						<li v-if="extraLink">
+							<div class="col s12 left-align">
+								[See also: <a :href="extraLink.link" target="_blank">{{ extraLink.text }}</a>]
+							</div>
+						</li>
+						<li v-if="countMetrics_shown == 0">
+							No metrics found here.
+						</li>
+						<li v-for="metric in sortedMetrics" :key="metric[primaryKey]" class="col s12 m10 l10 xl8 offset-m1 offset-l1 offset-xl2">
+							<MetricCard :metric="metric" :config="cardconfig" />
+						</li>
+					</ul>
+
+					<div class="divider" v-if="showCarousel"></div>
+					<h2 v-if="showCarousel">{{carouselType == 'statsCarousel' ? 'Stats' : 'Metrics'}}</h2>
+					<div v-if="showCarousel" class="row" shortcut>
+						<div class="col s12 l12 xl10 offset-xl1 grid" id="g1">
+							<ListOfMetrics id="details_carousel" :config="carouselconfig" :currentCategory="currentCategory" />
+						</div>
 					</div>
+
 				</div>
 
 			</div>
 		</main>
 	</div>
+
 </template>
 
 <script>
 import Vue from 'vue'
-import FixedNavBar from '../widgets/FixedNavBar'
-import HistoryGraph from '../widgets/HistoryGraph'
+import Moment from 'moment'
 import ListOfMetrics from '../widgets/ListOfMetrics'
-import KPI from '../widgets/KPI'
 import SearchMetricsBar from '../widgets/SearchMetricsBar'
 import MetricCard from '../widgets/MetricCard'
 export default {
 	name: 'Details',
 	components: {
-		FixedNavBar, HistoryGraph, ListOfMetrics, KPI, SearchMetricsBar, MetricCard
+		ListOfMetrics, SearchMetricsBar, MetricCard
 	},
 	props: [],
+	beforeRouteUpdate (to, from, next) {
+		if(this.debug) console.log(to.name)
+		if(this.debug) console.log('beforeRouteUpate - Details')
+		var newParams = to.params
+		var needsUpdate = false
+		//checkViewParams
+		if(to.name == 'Details' || to.name == 'DetailsWithId'){
+			// admin, dept, unknown redirects to edit automatically
+			if(newParams.location == 'admin' || newParams.location == 'data' || newParams.location == 'unknown'){
+				newParams = Object.assign(newParams, {status: 'deployed'})
+				if(newParams.id) next({ name: 'DetailsWithIdEdit', params: newParams })
+				else next({ name: 'DetailsEdit', params: newParams })
+			}
+			// redirect
+			else if((this.isStats && (newParams.location == 'public' || newParams.location == 'internal')) || (!this.isStats && newParams.location == 'stats') ){
+				var redirectURL = this.redirectURL + to.fullPath
+				window.location.assign(redirectURL)
+				next(false)
+			}
+			else{
+				// clean location param
+				if((this.isStats && newParams.location != 'stats') || (!this.isStats && newParams.location != 'public' && newParams.location != 'internal')){
+					if(this.isStats) newParams.location = 'stats'
+					else newParams.location = 'public'
+					needsUpdate = true
+				}
+				if(needsUpdate) next({ name: to.name, params: newParams })
+				else{
+					if(newParams.location == 'internal'){
+						if(this.$store.state.userEmail){
+							console.log('email in store')
+							next()
+						}
+						else{
+							if(sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail){
+								console.log('already auth')
+								this.$store.commit('login', { email: localStorage.colEmail })
+								next()
+							}
+							else{
+								console.log('needs auth')
+								var redirectOnAuth = to.fullPath;
+								var redirectOnFail = redirectOnAuth
+								redirectOnFail = redirectOnFail.replace('internal', 'public')
+								next({ path: '/login/1', query: { redirect: redirectOnAuth, failredirect: redirectOnFail } })
+							}
+						}
+					}
+					else next()
+				}
+			}
+		}
+		else if(to.name == 'DetailsEdit' || to.name == 'DetailsWithIdEdit'){
+			// clean location param
+			if(newParams.location != 'admin' && newParams.location != 'public' && newParams.location != 'stats' && newParams.location != 'internal' && newParams.location != 'data' && newParams.location != 'unknown'){
+				if(this.isStats) newParams.location = 'stats'
+				else newParams.location = 'public'
+				needsUpdate = true
+			}
+			// clean status param
+			if(newParams.status != 'deployed' && newParams.status != 'development' && newParams.status != 'review' && newParams.status != 'missing'){
+				newParams.status = 'deployed'
+				needsUpdate = true
+			}
+			// deployed edit view should look the same as view - hide routes for all locations and all departments
+			if(newParams.status == 'deployed'){
+				if(newParams.location == 'admin'){
+					if(this.isStats) newParams.location = 'stats'
+					else newParams.location = 'public'
+					needsUpdate = true
+				}
+				if(newParams.dept == 'all'){
+					newParams.dept = 'citywide'
+					needsUpdate = true
+				}
+			}
+			if(needsUpdate) next({ name: to.name, params: newParams })
+			else{
+				if(this.$store.state.userEmail){
+					console.log('email in store')
+					next()
+				}
+				else{
+					if(sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail){
+						console.log('already auth')
+						this.$store.commit('login', { email: localStorage.colEmail })
+						next()
+					}
+					else{
+						console.log('needs auth')
+						var redirectOnAuth = to.fullPath;
+						var redirectOnFail = redirectOnAuth
+						var i = redirectOnFail.indexOf('/edit')
+						if(i > -1) redirectOnFail = redirectOnFail.substring(0, i)
+
+						var failLocation = 'public'
+						if(this.isStats) failLocation = 'stats'
+						if(to.params.location == 'internal') redirectOnFail = redirectOnFail.replace('internal', 'public')
+						else if(to.params.location == 'admin') redirectOnFail = redirectOnFail.replace('admin', failLocation)
+						else if(to.params.location == 'data') redirectOnFail = redirectOnFail.replace('data', failLocation)
+						else if(to.params.location == 'unknown') redirectOnFail = redirectOnFail.replace('unknown', failLocation)
+
+						next({ path: '/login/1', query: { redirect: redirectOnAuth, failredirect: redirectOnFail } })
+					}
+				}
+			}
+		}
+		else next()
+	},
 	data () {
 		return {
+			debug: true,
+			needsInit: true,
+			needsInit_materialize: true,
+			needsInit_scrolled: true,
+			timestamp: null,
+			// params computed
+
+			showStatusParam: 'deployed',
 			scrolled: false,
-			working: false,
-			metricLocation: 'Public',
 			landingURL: 'https://metrics.cityoflewisville.com/',
 			extraLinks: [
 				{
@@ -187,379 +306,435 @@ export default {
 					link : 'http://eservices.cityoflewisville.com/pepawards/'
 				}
 			],
-			config6: {
-				compid: 'g6-list',
-				editable: false,
-				department: this.department ? this.department : 'All Departments',
-				stats: true
-			}
 		}
 	},
 
 	computed: {
-		underLarge() {
-			return this.$store.state.underLarge
-		},
-		extraLink() {
-			for (var link of this.extraLinks) {
-				if (link.for == this.currentCat.display) return link
+		// route
+		routeName() { return this.$route.name },
+		routeParams() { return this.$route.params },
+		locationParam() { return this.routeParams.location },
+		deptParam() { return this.routeParams.dept },
+		idParam() { return this.routeParams.id },
+		statusParam() { return this.routeParams.status },
+
+		// store.state
+		storeDebug() { return this.$store.state.debug },
+		routeDebug() { return this.$store.state.routeDebug },
+		storeIsLoading() { return this.$store.state.isLoading },
+		storeIsRefreshing() { return this.$store.state.softReloading },
+		refreshedAt() { return this.$store.state.fromNow },
+		underLarge() { return this.$store.state.underLarge },
+
+		// store.getters
+		isStats() { return this.$store.getters.isStats },
+		routeLocations() { return this.$store.getters.routeLocations },
+		routeStatuses() { return this.$store.getters.routeStatuses },
+		routeDepts() { return this.$store.getters.routeDepts },
+		redirectURL() { return this.$store.getters.redirectURL },
+		primaryKey() { return this.$store.getters.psofiaVars.primaryKey },
+		categoriesLoading() { return this.$store.getters.isLoading_categories },
+		categoryTypes() { return this.$store.getters.categoryTypes },
+		carouselIsLoading() { return this.$store.getters.isLoading_detailCarousel },
+		carouselIsRefreshing() { return this.$store.state.detailCarouselSoftReloading },
+
+		// store.getters with params
+		currentCategory() { return this.$store.getters.fullCategoryByDeptParam(this.deptParam) },
+		currentRouteLocation() { return this.$store.getters.routeLocationByLocationParam(this.locationParam) },
+		
+		isLoading() { return this.needsInit || this.storeIsLoading },
+		isEditing() { return (this.routeName == 'DetailsEdit' || this.routeName == 'DetailsWithIdEdit') },
+
+		params() {
+			var sitename = '', status = 'deployed', type = '', master = ''
+			if (this.isEditing){
+				master = 'all'
+				status = (this.statusParam == 'missing') ? null : this.statusParam
 			}
-			return null
-		},
-		isLoading() {
-			return this.$store.state.isLoading
-		},
-		isStats() {
-			return this.$route.fullPath.indexOf('stats') != -1
-		},
-		location() {
-			console.log(this.$route)
-			return this.$route.params.location
-		},
-		// sort by query -> static, then alphabetical by name
-		metrics() {
-			return this.$store.state.metrics.sort((a,b) => {
-				if (a.metrictype == b.metrictype) {
-					return (a.realtimeshortname < b.realtimeshortname) ? -1 : (a.realtimeshortname > b.realtimeshortname) ? 1 : 0
-				}
-				else {
-					return (a.metrictype < b.metrictype) ? -1 : 1
-				}
-			})
-		},
-
-		stats() {
-			return this.$store.state.stats.sort((a,b) => {
-				if (a.metrictype == b.metrictype) {
-					return (a.realtimeshortname < b.realtimeshortname) ? -1 : (a.realtimeshortname > b.realtimeshortname) ? 1 : 0
-				}
-				else {
-					return (a.metrictype < b.metrictype) ? -1 : 1
-				}
-			})
-		},
-
-		filteredMetrics() {
-			if (this.currentCat.id == 'all')
-				return this.metrics
-			return this.metrics.filter(metric => {
-				return metric.category1 == this.currentCat.id || metric.cateogry3 == this.currentCat.id || metric.category2 == this.currentCat.id
-			})
-		},
-
-		filteredStats() {
-			if (this.currentCat.id == 'all')
-				return this.stats
-			return this.stats.filter(metric => {
-				return metric.category1 == this.currentCat.id || metric.cateogry3 == this.currentCat.id || metric.category2 == this.currentCat.id
-			})
-		},
-
-
-		departments() {
-			return this.$store.state.departments.sort((a,b) => {
-				if (a.bmpdisplayname < b.bmpdisplayname) return -1
-				if (a.bmpdisplayname > b.bmpdisplayname) return 1
-				return 0
-			})
-		},
-
-		citypriorities() {
-			return this.$store.state.citypriorities.sort((a,b) => {
-				if (a.bmpdisplayname < b.bmpdisplayname) return -1
-				if (a.bmpdisplayname > b.bmpdisplayname) return 1
-				return 0
-			})
-		},
-
-		bigmoves() {
-			return this.$store.state.bigmoves.sort((a,b) => {
-				if (a.bmpdisplayname < b.bmpdisplayname) return -1
-				if (a.bmpdisplayname > b.bmpdisplayname) return 1
-				return 0
-			})
-		},
-
-		currentCat() {
-			var cat = {}
-			for (var i in this.$store.state.departments) {
-				var dept = this.$store.state.departments[i]
-				if (dept.bmpdisplayname.replace(/ /g,'').toLowerCase() == this.$route.params.dept)
-					return { id: dept.bmpid, display: dept.bmpdisplayname }
-			}
-			for (var i in this.$store.state.citypriorities) {
-				var priority = this.$store.state.citypriorities[i]
-				if (priority.bmpdisplayname.replace(/ /g,'').toLowerCase() == this.$route.params.dept)
-					return { id: priority.bmpid, display: priority.bmpdisplayname }
-			}
-			for (var i in this.$store.state.bigmoves) {
-				var move = this.$store.state.bigmoves[i]
-				if (move.bmpdisplayname.replace(/ /g,'').toLowerCase() == this.$route.params.dept)
-					return { id: move.bmpid, display: move.bmpdisplayname }
-			}
+			if(this.locationParam == 'admin') sitename = 'all'
+			else if(this.locationParam == 'stats') sitename = 'stat'
+			else if(this.locationParam == 'internal') sitename = 'metricInternal'
+			else sitename = 'metricPublic'
 			return {
-				id: 'all',
-				display: 'All'
-			}
-		},
-
-		editing() {
-			return (this.$route.params.id == 'edit' || this.$route.params.edit == 'edit')// || localStorage.colAuthToken)
-		}
-	},
-
-	watch: {
-		metrics() {
-			if (!this.scrolled) Vue.nextTick(this.checkMetricsForRouteId)
-		},
-		location() {
-			this.checkLocation()
-		},
-		'$route' (to, from) {
-			$('html, body').scrollTop(0)
-			this.checkMetricsForRouteId()
-		},
-		metricLocation() {
-			var flags = []
-			if (this.metricLocation == 'Public') { this.fetchMetrics(); return }
-			else if (this.metricLocation == 'Review') flags = [0,0,0,'','review','','']
-			else if (this.metricLocation == 'Development') flags = [0,0,0,'','development','','']
-			this.setLocation(...flags)
-		},
-		editing() {
-			if (!this.editing) {
-				this.fetchMetrics()
-				this.metricLocation = 'Public'
-			}
-			else {
-				authenticate()
-			}
-		}
-	},
-
-	mounted() {
-		$("#details-side").sideNav();
-		if (this.editing) authenticate()
-		if (this.$store.state.metrics.length == 0) this.fetchMetrics()
-		Vue.nextTick(this.checkMetricsForRouteId)
-	},
-
-	methods: {
-
-		// uses store to fetch metrics
-		fetchMetrics(clicked) {
-
-			if (clicked == true) this.scrolled = false
-
-			this.$store.commit('clearMetrics')
-
-			// admin
-			var admin = this.$route.fullPath.toLowerCase().indexOf('admin')
-
-			var isStats = this.$route.fullPath.toLowerCase().indexOf('stats') != -1
-
-			// specifies which metrics to fetch
-			var _params = {
-				public: isStats ? 0 : 1,
-				internal: 0,
-				stat: isStats ? 1 : 0,
-				sitename: '',
-				status: 'deployed',
-				type: '',
-				master: admin == -1 ? '' : 'all'
-			}
-
-			if (this.metricLocation != 'Public'){
-				_params.public = 0
-				_params.internal = 0
-				_params.stat = 0
-				_params.sitename = ''
-				if (this.metricLocation == 'Review') _params.deployed = 'review'
-				if (this.metricLocation == 'Development') _params.deployed = 'development'
-			}
-
-			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
-			this.$store.dispatch('fetchStats', {
-				public: 0,
-				internal: 0,
-				stat: 1,
-				status: 'deployed',
-				type: '',
-				master: admin == -1 ? '' : 'all'
-			}).then(res => this.$store.state.stats)
-			
-		},
-
-		checkMetricsForRouteId() {
-			if (!this.$route.params.id) {
-				this.scrolled = true
-				return
-			}
-			for (var i in this.filteredMetrics) {
-				if (this.filteredMetrics[i].psofia_recordid == this.$route.params.id) {
-					this.scrollToMetric('#metric-card-' + this.$route.params.id)
-				}
-			}
-		},
-
-		scrollToMetric(id) {
-			Vue.nextTick(() => {
-				$(window).scrollTop($(id).offset().top-150)
-				// janky
-				// $('html, body').animate({ scrollTop: $(id).offset().top - 150 }, 1000)
-				this.scrolled = true
-			})
-		},
-
-		backToDashboad() {
-			this.$router.go(-1)
-		},
-
-		setCat(cat) {
-			// this.currentCat.id = cat.bmpid
-			// this.currentCat.display = cat.bmpdisplayname
-
-			// get department without spaces
-			var d = cat.bmpdisplayname.toLowerCase().replace(/ /g, '')
-			console.log(d)
-
-			// check if admin
-			var admin = this.$route.fullPath.toLowerCase().indexOf('admin')
-
-			// if there's a psofia id, include it
-			if (this.$route.params.id && this.$route.params.id != 'edit') {
-				if (admin == -1) {
-					if (this.editing)
-						this.$router.push({
-							name: 'DetailsWithId',
-							params: {
-								dept: d,
-								id: 'edit'
-							}
-						})
-					else
-						this.$router.push({
-							name: 'Details',
-							params: {
-								dept: d
-							}
-						})
-				}
-				else this.$router.push({ name: 'AdminDetails', params: { dept: d } })
-			}
-
-			// else just move to the department
-			else {
-				if (this.editing) {
-					this.$router.push({
-						name: 'DetailsWithId',
-						params: {
-							dept: d,
-							id: 'edit'
-						}
-					})
-				}
-				else {
-					this.$router.push({
-						name: 'Details',
-						params: {
-							dept: d
-						}
-					})
-				}
-			}
-		},
-
-		countOf(category, cat) {
-			var sum = 0
-			this.metrics.forEach(metric => {
-				if (cat == 'd') if (metric.category1 == category.bmpid) sum++
-				if (cat == 'p') if (metric.cateogry3 == category.bmpid) sum++
-				if (cat == 'b') if (metric.category2 == category.bmpid) sum++
-			})
-			return sum
-		},
-
-		checkLocation() {
-			if (this.location == 'public') this.setLocation(1, 0, 0, 'metricPublic', 'deployed', '', '')
-			else if (this.location == 'internal') this.setLocation(1, 1, 0, 'metricInternal', 'deployed', '', '')
-			else if (this.location == 'stats') this.setLocation(0, 0, 1, 'stat', 'deployed', '', '')
-		},
-
-		setLocation(pflag, iflag, sflag, sitename, status, type, master) {
-			this.working = true
-			this.$store.commit('clearMetrics')
-
-			// specifies which metrics to fetch
-			var _params = {
-				public: pflag,
-				internal: iflag,
-				stat: sflag,
 				sitename: sitename,
 				status: status,
 				type: type,
-				master: master
+				master: master,
 			}
+		},
 
-			// call fetch on Store
-			this.$store.dispatch('fetchMetrics', _params)
+		metrics_shown() {
+			if(!this.currentCategory || this.currentCategory.id == 'loading') return []
+			if(!this.isEditing) return this.$store.getters.metricsByPayload({ category: this.currentCategory, checkAll: true })
+			else return this.$store.getters.metricsByPayload({ statusParam: this.statusParam, category: this.currentCategory, routeLocation: this.currentRouteLocation, checkAll: true })
+		},
+		countMetrics_shown(){ return this.metrics_shown.length },
+		sortedMetrics(){
+			// sort by query -> static, then alphabetical by name
+			return this.metrics_shown.sort((a,b) => {
+				if (a.metrictype == b.metrictype) {
+					return (a.realtimeshortname < b.realtimeshortname) ? -1 : (a.realtimeshortname > b.realtimeshortname) ? 1 : 0
+				}
+				else {
+					return (a.metrictype < b.metrictype) ? -1 : 1
+				}
+			})
+		},
 
-			// // change url accordingly
-			// if (iflag) this.$route.params.location = 'internal'
-			// else if (pflag) this.$route.params.location = 'public'
-		}
+		carouselType() {
+			// stats carousel shown: public or internal view on metrics.col, public or internal deployed edit view on either domain
+			// metrics carousel shown: stats view on stats.col, stats deployed edit view on either domain
+			var type = null
+			if(!this.isEditing){
+				// checking location param jic
+				if(!this.isStats && (this.locationParam == 'public' || this.locationParam == 'internal')) type = 'statsCarousel'
+				else if(this.isStats && this.locationParam == 'stats') type = 'metricsCarousel'
+			}
+			else{
+				// only show on deployed public or stats details page
+				if(this.statusParam == 'deployed'){
+					if(this.locationParam == 'public' || this.locationParam == 'internal') type = 'statsCarousel'
+					else if(this.locationParam == 'stats') type = 'metricsCarousel'
+				}
+			}
+			return type
+		},
+		includeCarousel() { return ( this.carouselType != null ) },
+		showCarousel() { return this.includeCarousel && this.countDetailCarousel > 0 },
+		countDetailCarousel() {
+			if(!this.currentCategory || this.currentCategory.id == 'loading' || this.isLoading || this.carouselIsLoading) return 0
+			return this.$store.getters.countDetailCarouselByPayload({ category: this.currentCategory, checkAll: true })
+		},
+
+		location_all() { return this.routeLocations.find(routeLocation => routeLocation.locationParam == 'admin') },
+		location_data() { return this.routeLocations.find(routeLocation => routeLocation.locationParam == 'data') },
+		location_unknown() { return this.routeLocations.find(routeLocation => routeLocation.locationParam == 'unknown') },
+		category_all() { return this.routeDepts.find(routeDept => routeDept.deptParam == 'all') },
+		category_none() { return this.routeDepts.find(routeDept => routeDept.deptParam == 'missing') },
+		allLocationsDisabled() {
+			if(this.isEditing) return (this.statusParam == 'deployed')
+			else return true
+		},
+		allCategoriesDisabled() {
+			if(this.isEditing) return (this.statusParam == 'deployed')
+			else return true
+		},
+		includeLocation_data() { if(this.isEditing) return this.$store.getters.checkInclude({ routeLocation: this.location_data }) },
+		includeLocation_unknown() { if(this.isEditing) return this.$store.getters.checkInclude({ routeLocation: this.location_unknown }) },
+		includeCategoriesMissing() { if(this.isEditing) return this.$store.getters.checkInclude({ category: this.category_none }) },
+		includeStatusMissing() { if(this.isEditing) return this.$store.getters.checkInclude({ statusParam: 'missing' }) },
+		filteredRouteLocations() {
+			if(!this.isEditing) return []
+			return this.routeLocations.filter(routeLocation => {
+				if(routeLocation.locationParam == 'admin') return !(this.allLocationsDisabled)
+				else if(routeLocation.locationParam == 'data') return (this.locationParam == 'data' || this.includeLocation_data)
+				else if(routeLocation.locationParam == 'unknown') return (this.locationParam == 'unknown' || this.includeLocation_unknown)
+				else return true
+			}).sort((a, b) => a.order - b.order)
+		},
+		filteredRouteStatuses() { 
+			if(!this.isEditing) return []
+			return this.routeStatuses.filter(routeStatus => {
+				if(routeStatus.statusParam == 'missing') return this.statusParam == 'data' || this.includeLocation_data
+				else return true
+			}).sort((a, b) => a.order - b.order)
+		},
+		filteredRouteDepts() {
+			return this.routeDepts.filter(routeDept => {
+				if(routeDept.deptParam == 'admin') return !(this.allLocationsDisabled)
+				else if(routeDept.deptParam == 'missing') return (this.isEditing && (this.deptParam == 'missing' || this.includeLocation_data))
+				else return true
+			})
+		},
+		filteredCategoryTypes() {
+			return this.categoryTypes.filter(categoryType => {
+				return this.filteredRouteDepts.some(routeDept => categoryType.type == routeDept.type)
+			}).sort((a, b) => a.order - b.order)
+		},
+
+		searchconfig() {
+			return {
+				compid: 'small-search',
+				//timestamp: this.timestamp ? this.timestamp.valueOf() : null,
+				nav: false,
+				editing: this.isEditing,
+			}
+		},
+		cardconfig() {
+			return{
+				timestamp: this.timestamp ? this.timestamp.valueOf() : null,
+				editing: this.isEditing,
+			}
+		},
+		carouselconfig() {
+			return {
+				compid: 'g1-list',
+				type: this.carouselType,
+				//timestamp: this.timestamp ? this.timestamp.valueOf() : null,
+				editable: false,
+				editing: this.isEditing,
+			}
+		},
+		extraLink() {
+			if(!this.currentCategory) return null
+			for (var link of this.extraLinks) {
+				if (link.for == this.currentCategory.display) return link
+			}
+			return null
+		},
+	},
+
+	watch: {
+		params:{
+			immediate: false,
+			handler(newVal, oldVal){
+       			this.updateFetchParams()
+     		},
+     		deep: true
+		},
+		'$route' (to, from) {
+			if(to.name == 'Details' || to.name == 'DetailsWithId' || to.name == 'DetailsEdit' || to.name == 'DetailsWithIdEdit'){
+				if(from.name != 'Details' || from.name != 'DetailsWithId' || from.name != 'DetailsEdit' || from.name != 'DetailsWithIdEdit'){
+					if(this.routeDebug) console.log('Route Changed - Enter')
+					this.needsInit = true
+					this.needsInit_materialize = true
+					this.init()
+				}
+				else{
+					if((to.name == 'Details' || to.name == 'DetailsWithId') && (from.name != 'DetailsEdit' || from.name != 'DetailsWithIdEdit')){
+						if(this.routeDebug) console.log('Route Changed - Update - Change to View')
+						this.needsInit = true
+						this.init()
+					}
+					else if((to.name == 'DetailsEdit' || to.name == 'DetailsWithIdEdit') && (from.name != 'Details' || from.name != 'DetailsWithId')){
+						if(this.routeDebug) console.log('Route Changed - Update - Change to Edit')
+						this.needsInit = true
+						this.init()
+					}
+					else{
+						if(this.routeDebug) console.log('Route Changed - Update')
+						this.resetScroll()
+						this.timestamp = Moment()
+						if(to.params.status && this.showStatusParam != to.params.status) this.showStatusParam = this.statusParam
+					}
+				}
+			}
+		},
+		// change route when status select is changed
+		showStatusParam(newVal, oldVal) {
+			if(this.isEditing && this.statusParam != newVal){
+				var newParams = this.routeParams
+				var newRouteName = this.routeName
+				newParams.status = newVal
+				// on view review or development, goto all locations, all categories
+				if(newVal == 'review' || newVal == 'development'){
+					newParams.location = 'admin'
+					newParams.dept = 'all'
+				}
+				if(newVal == 'deployed'){	// on edit view deployed, can't goto all locations or all categories
+					if(newParams.location == 'admin') newParams.location = this.isStats ? 'stat' : 'public'
+					if(newParams.dept == 'all') newParams.dept = 'citywide'
+				}
+				// remove id
+					if(newRouteName.indexOf('WithId')) newRouteName = newRouteName.replace('WithId', '')
+					if(newParams.id) delete newParams.id
+				this.$router.push({ name: newRouteName, params: newParams })
+			}
+		},
+		isLoading:{
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.storeDebug) console.log('isLoading: ' + oldVal  + ' -> ' + newVal)
+				if(!newVal && oldVal){
+					if (this.needsInit_scroll) Vue.nextTick(this.checkMetricsForRouteId)
+				}
+			},
+		},
+		storeIsLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) { if(this.storeDebug) console.log('storeIsLoading: ' + oldVal  + ' -> ' + newVal) },
+		},
+		storeIsRefreshing:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) { if(this.storeDebug) console.log('storeIsRefreshing: ' + oldVal  + ' -> ' + newVal) },
+		},
+		categoriesLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) { if(this.storeDebug) console.log('categoriesLoading: ' + oldVal  + ' -> ' + newVal) },
+		},
+	},
+
+	mounted() {
+		if(this.debug) console.log('Mounted')
+		this.init()
+	},
+	beforeDestroy() {
+		if(this.debug) console.log('Destroy')
+		$("#details-side-nav.button-collapse").sideNav('destroy')
+	},
+
+	methods: {
+		init(){
+			this.initSideNav()
+			this.resetScroll()
+			this.timestamp = Moment()
+			if(!this.isEditing) this.showStatusParam = 'deployed'
+			else this.showStatusParam = this.statusParam
+			this.updateFetchParams()
+			this.needsInit = false
+		},
+		initSideNav(){
+			$("#details-side-nav.button-collapse").sideNav()
+			this.needsInit_materialize = false
+		},
+		resetScroll() {
+			$('html, body').scrollTop(0)
+			if(this.idParam) this.needsInit_scroll = true
+			else this.needsInit_scroll = false
+		},
+		updateFetchParams() {
+			var payload = {
+				params: this.params,
+				detailCarouselType: this.detailCarouselType,
+			}
+			if(this.debug) console.log('Update fetch params')
+			this.$store.dispatch('updateFetchParams', payload)
+		},
+		clearMetrics() {
+			if(this.debug) console.log('Clear metrics')
+			this.$store.commit('clearMetrics')
+			this.resetScroll()
+		},
+		fetchMetrics() {
+			if(this.debug) console.log('Fetch metrics')
+			this.$store.commit('clearMetrics')
+			this.resetScroll()
+			this.$store.dispatch('fetchPerfMeasures')
+			this.fetchDetailCarousel()
+		},
+		fetchDetailCarousel(){
+			if(this.includeCarousel){
+				if(this.debug) console.log('Fetch carousel')
+				this.$store.commit('clearDetailCarousel')
+				this.$store.dispatch('fetchDetailCarousel')
+			}
+		},
+
+		checkMetricsForRouteId() {
+			if (!this.idParam) {
+				return
+			}
+			var selectedMetric = this.metrics_shown.find(metric => metric[this.primaryKey] == this.idParam)
+			if(selectedMetric) this.scrollToMetric('#metric-card-' + this.idParam)
+			else{
+				this.needsInit_scroll = false
+				console.warn('no metric found for id')
+			}
+		},
+		scrollToMetric(id) {
+			Vue.nextTick(() => {
+				$(window).scrollTop($(id).offset().top-150)
+				this.needsInit_scroll = false
+			})
+		},
+		scrollToCarousel() {
+			$(window).scrollTop($('detail_carousel').offset().top-20)
+		},
+
+		filteredRouteDeptsByType(type) {
+			return this.filteredRouteDepts.filter(routeDept => type == routeDept.type).sort((a,b) => {
+				var orderDiff = a.order - b.order
+				if(orderDiff != 0) return orderDiff
+				if (a.display.toLowerCase() < b.display.toLowerCase()) return -1
+				if (a.display.toLowerCase() > b.display.toLowerCase()) return 1
+				return 0
+			})
+		},
+
+		setDeptParam(category) {
+			if(category.deptParam != this.deptParam){
+				// hide all departments deployed page
+				if(category.deptParam == 'all' && allCategoriesDisabled) return
+				else{
+					var newParams = this.routeParams
+					var newRouteName = this.routeName
+					newParams.dept =  category.deptParam
+					// remove id
+						if(newRouteName.indexOf('WithId')) newRouteName = newRouteName.replace('WithId', '')
+						if(newParams.id) delete newParams.id
+					this.$router.push({ name: newRouteName, params: newParams })
+				}
+			}
+		},
+		setLocationParam(routeLocation){
+			if(this.isEditing && routeLocation.locationParam != this.locationParam){
+				// hide all locations deployed page
+				if(routeLocation.locationParam == 'admin' && allLocationsDisabled) return
+				else{
+					var newParams = this.routeParams
+					var newRouteName = this.routeName
+					newParams.location = routeLocation.locationParam
+					// on view review/development/missing, goto all categories on location change
+						if(newParams.status != 'deployed') newParams.dept = 'all'
+					// remove id
+						if(newRouteName.indexOf('WithId')) newRouteName = newRouteName.replace('WithId', '')
+						if(newParams.id) delete newParams.id
+					this.$router.push({ name: newRouteName, params: newParams })
+				}
+			} else return
+		},
+		setStatusParam(statusParam) {
+			if(this.isEditing && this.statusParam != statusParam){
+				var newParams = this.routeParams
+				var newRouteName = this.routeName
+				newParams.status =  statusParam
+				if(newVal == 'review' || newVal == 'development'){
+					newParams.location = 'admin'
+					newParams.dept = 'all'
+				}
+				if(statusParam == 'deployed'){
+					if(newParams.location == 'admin') newParams.location = this.isStats ? 'stats' : 'public'
+					if(newParams.dept == 'all') newParams.dept = 'citywide'
+				}
+				// remove id
+					if(newRouteName.indexOf('WithId')) newRouteName = newRouteName.replace('WithId', '')
+					if(newParams.id) delete newParams.id
+				this.$router.push({ name: newRouteName, params: newParams })
+			}
+		},
+		getCountByCategory(category) {
+			if(!this.isEditing) return this.$store.getters.countMetricsByPayload({category: category, checkAll: true })
+			else{
+				return this.$store.getters.countMetricsByPayload({statusParam: this.statusParam, routeLocation: this.currentRouteLocation, category: category, checkAll: true })
+			}
+		},
+		getCountByLocation(routeLocation){
+			// only shown on editing
+			return this.$store.getters.countMetricsByPayload({ statusParam: this.statusParam, routeLocation: routeLocation })
+		},
+
+		goBack() {
+      		window.history.length > 1 ? this.$router.go(-1) : this.$router.push('/')
+    	}
 	}
 }
 </script>
 
 <style scoped>
-.top {}
+.pointy {
+	cursor: pointer;
+}
 .back {
 	margin-left: 16px;
 	cursor: pointer;
 	display: inline-block;
 }
-.col-purple {
-    background-color: #5A348D !important;
-}
-.sidenav-trigger {
-	display: none;
-}
+
 .brand-logo {
 	white-space: nowrap;
     width: 100%;
     font-size: 1.5rem;
-    padding-left: 64px
-}
-.pointy {
-	cursor: pointer;
-}
-.navbar-fixed {
-}
-ul.right {
-	position: absolute;
-    right: 0;
-}
-#metric-list {
-    position: relative;
-}
-#slide-out {
-	margin-top: 64px;
-	height: calc(100vh - 64px);
-	padding-bottom: 0;
-	/*border-right: 10px solid rgb(84,110,122);*/
-	/*box-shadow: none;*/
-}
-.deptname {
-	font-size: 1.5rem;
-	margin: 8px
-}
-header, main, footer {
-	padding-left: 300px;
-}
-main .main {
-	margin-top: 64px;
+    padding-left: 64px;
 }
 .logo {
     position: absolute;
@@ -574,11 +749,65 @@ main .main {
     opacity: 1;
     margin: 0 16px;
 }
+#top-nav select {
+	color: black;
+	display: inline-block;
+}
+
+/* to keep full width navbar above fixed side-nav*/
+#slide-out {
+	margin-top: 64px;
+	height: calc(100vh - 64px);
+	padding-bottom: 0;
+}
+/* for fixed side-nav */
+main {
+	padding-left: 300px;
+}
+
+ul.right {
+	position: absolute;
+    right: 0;
+}
+
+li.search {
+	padding: 1px 8px;
+}
+li.search .searchbar {
+	border: 3px solid grey !important;
+	z-index: 2;
+	/*position: relative;*/
+}
+li.header {
+	font-weight: bold;
+	text-align: left;
+	margin-left: 16px;
+}
+
+
+
+.second-nav .deptname {
+	font-size: 1.5rem;
+	margin: 8px;
+}
+.second-nav ul {
+	margin-top: 5px;
+	margin-right: 8px;
+}
+.second-nav {
+	z-index: 80;
+	-webkit-box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+    position: fixed;
+	top: 64px;
+	width: 100%;
+}
+main .main {
+	margin-top: 64px;
+}
+
+
 @media only screen and (max-width : 992px) {
-	#slide-out {
-		margin-top: 0;
-		height: 100vh;
-	}
 	.brand-logo {
 		white-space: nowrap;
 	    width: 100%;
@@ -588,27 +817,25 @@ main .main {
 	.logo {
 		display: none;
 	}
-	header, main, footer {
+	#slide-out {
+		margin-top: 0;
+		height: 100vh;
+	}
+	main {
 		padding-left: 0;
 	}
 }
-@media only screen and (max-width : 600px) {
-	.second-nav {
-		top: 56px !important;
-	}
+
+.spinner {
+	width: 60px;
+	height: 60px;
+	position: relative;
+	margin: 100px auto;
 }
-.second-nav ul {
-	margin-top: 5px;
-	margin-right: 8px
-}
-.second-nav {
-	position: fixed;
-	top: 64px;
-	width: 100%;
-	z-index: 80;
-	-webkit-box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
-    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
-}
+
+
+/* ANIMATIONS */
+
 nav i.material-icons.active {
 	animation: spin 2s linear infinite;
 }
@@ -616,61 +843,54 @@ nav i.material-icons.active {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-
-li.search {
-	padding: 1px 8px;
-}
-li.search .searchbar {
-	border: 3px solid grey !important;
-	z-index: 2;
-    position: relative;
-}
-li.header {
-	font-weight: bold;
-	text-align: left;
-	margin-left: 16px;
-}
-#top-nav select {
-	color: black;
-	display: inline-block;
-}
-.spinner {
-  width: 60px;
-  height: 60px;
-
-  position: relative;
-  margin: 100px auto;
-}
-
 .double-bounce1, .double-bounce2 {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background-color: rgba(0,0,0,0.3);
-  position: absolute;
-  top: 0;
-  left: 0;
-  -webkit-animation: sk-bounce 2.0s infinite ease-in-out;
-  animation: sk-bounce 2.0s infinite ease-in-out;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	background-color: rgba(0,0,0,0.3);
+	position: absolute;
+	top: 0;
+	left: 0;
+	-webkit-animation: sk-bounce 2.0s infinite ease-in-out;
+	animation: sk-bounce 2.0s infinite ease-in-out;
 }
-
 .double-bounce2 {
-  -webkit-animation-delay: -1.0s;
-  animation-delay: -1.0s;
+	-webkit-animation-delay: -1.0s;
+	animation-delay: -1.0s;
 }
-
 @-webkit-keyframes sk-bounce {
-  0%, 100% { -webkit-transform: scale(0.0) }
-  50% { -webkit-transform: scale(1.0) }
+	0%, 100% { -webkit-transform: scale(0.0) }
+	50% { -webkit-transform: scale(1.0) }
+}
+@keyframes sk-bounce {
+	0%, 100% {
+		transform: scale(0.0);
+		-webkit-transform: scale(0.0);
+	} 50% {
+		transform: scale(1.0);
+		-webkit-transform: scale(1.0);
+	}
 }
 
-@keyframes sk-bounce {
-  0%, 100% {
-    transform: scale(0.0);
-    -webkit-transform: scale(0.0);
-  } 50% {
-    transform: scale(1.0);
-    -webkit-transform: scale(1.0);
-  }
+
+/* TRANSITIONS */
+
+.fade-enter-active, .fade-leave-active {
+	transition: all 0.5s;
 }
+.fade-enter, .fade-leave-to{
+	opacity: 0;
+	transform: translate3d(0, 100px,0);
+}
+
+
+/* COLORS */
+
+.col-purple {
+    background-color: #5A348D !important;
+}
+.col-purple-text {
+    color: #5A348D !important;
+}
+
 </style>

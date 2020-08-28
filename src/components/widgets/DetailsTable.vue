@@ -10,9 +10,19 @@ import axios from 'axios'
 export default {
 	name: 'DetailsTable',
 	components: {},
-	props: ['metric'],
+	props: {
+		metric: {
+			type: Object,
+			required: true,
+		},
+		config: {	// timestamp
+			type: Object,
+			required: true,
+		},
+	},
 	data () {
 		return {
+			debug: true,
 		}
 	},
 
@@ -35,7 +45,6 @@ export default {
 			if (this.metric.metrictype != 'Query') return
 			// fetch
 			axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Details or History', {
-				// webservice: 'Performance Measures/Get Details or History',
 				uspName: this.metric.uspname,
 				DetOrAvg: 'DETAILS'
 			}).then(results => {

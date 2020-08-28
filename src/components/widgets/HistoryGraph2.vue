@@ -13,7 +13,7 @@
 <script>
 import Vue from 'vue'
 import axios from 'axios'
-import moment from 'moment'
+import Moment from 'moment'
 import ListOfMetricsButton from '../widgets/ListOfMetricsButton'
 import Chart from 'chart.js'
 export default {
@@ -99,7 +99,7 @@ export default {
 			var config = {
 				type: 'line',
 				data: {
-					labels: _data.map(row => moment(row.date.replace('Z','')).format('MM-DD-YYYY')),
+					labels: _data.map(row => Moment(row.date.replace('Z','')).format('MM-DD-YYYY')),
 					datasets: [
 						{
 							label: this.config.title ? this.config.title : this.title,

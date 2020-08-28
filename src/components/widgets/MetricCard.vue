@@ -1,44 +1,50 @@
 <template>
-	<div class="card metric-card" :id="'metric-card-' + metric.psofia_recordid" :class="{ active: metric.psofia_recordid == $route.params.id }">
+	<div :id="getCompID('metriccard')"
+		class="card metric-card"
+		:class="{ active: isSelected }">
 		<div class="left-align card-title valign-wrapper white-text darken-1"
-			:class="{ 'grey': metric.metrictype == 'Static' || isStats, [metric.CurrentColor]: true }">
+			:class="{ 'grey': isStatic || metricIsStat, [metric.CurrentColor]: true }">
 			{{ metric.metricname }}
-			<i class="material-icons right pointy" v-if="editing" @click="edit(metric)">edit</i>
+			<i v-if="isEditing" @click="gotoMetricForm"
+				class="material-icons right pointy">
+				edit
+			</i>
 		</div>
 		<div class="card-content row">
 			<div class="col s12 m5 center-align">
 				<div class="col s6 left-align live-indicator valign-wrapper">
-					<i class="material-icons left nomargin" :class="metric.metrictype == 'Query' ? 'green-text' : 'red-text'">
-						{{ metric.metrictype == 'Query' ? 'check' : 'remove' }}
+					<i class="material-icons left nomargin"
+						:class="typeIndicator.class">
+						{{ typeIndicator.icon }}
 					</i>
-					{{ metric.metrictype == 'Query' ? 'LIVE' : 'STATIC' }}
+					{{ typeIndicator.text }}
 				</div>
 				<div class="col s6 right-align">
-					<div class="center-align vs-yesterday" v-if="metric.vsYesterday !== null && metric.vsYesterday !== undefined">
-						<div :class="vsClass(metric)">{{ vsYesterday(metric.vsYesterday) }}</div>
+					<div v-if="showVsYesterday"
+						class="center-align vs-yesterday">
+						<div :class="vsClass">{{ vsYesterday }}</div>
 						<div>vs yesterday</div>
 					</div>
-					<div v-else> <!-- not sure why this is needing, but breaks spacing if not here -->
+					<div v-else> <!-- not sure why this is needed, but breaks spacing if not here -->
 						&nbsp;
 					</div>
 				</div>
-				<MetricCardValue :metric="metric" />
-				<HistoryButton :metric="metric" v-if="metric.metrictype == 'Query'"/>
-				<a 	class="btn btn-flat details-btn white grey-text text-darken-2 waves-effect waves-dark"
-					v-if="metric.metrictype == 'Query'"
-					@click="openDetailsModal">
-					details
-				</a><br>
-				<a 	class="btn btn-flat in-depth-btn white grey-text text-darken-2 waves-effect waves-dark"
-					v-if="metric.url"
-					:href="metric.url"
-					target="_blank">
+				<MetricCardValue
+					:metric="metric" :config="childConfig" />
+				<HistoryButton v-if="isQuery"
+					:metric="metric" :config="childConfig" />
+				<DetailsButton v-if="isQuery"
+					:metric="metric" :config="childConfig" />
+				<br>
+				<a v-if="metric.url"
+					:href="metric.url" target="_blank"
+					class="btn btn-flat in-depth-btn white grey-text text-darken-2 waves-effect waves-dark">
 					{{ metric.urllabel || 'in-depth' }}
 				</a>
 			</div>
 			<div class="col s12 m7">
 				<div class="row">
-					<div v-if="">
+					<div v-if="metric.Department">
 						<div class="col s12 left-align card-header grey-text">Department:</div>
 						<div class="col s12 left-align card-text grey-text text-darken-2">{{ metric.Department }}</div>
 					</div>
@@ -48,7 +54,7 @@
 						<div class="col s12 left-align card-text grey-text text-darken-2">{{ metric.metricdescription }}</div>
 					</div>
 
-					<div v-if="metric.metricgoal && location != 'stats'">
+					<div v-if="metric.metricgoal && !metricIsStat">		<!--locationParam != 'stats'-->
 						<div class="col s12 left-align card-header grey-text">Goal:</div>
 						<div class="col s12 left-align card-text grey-text text-darken-2">{{ metric.metricgoal }}</div>
 					</div>
@@ -65,28 +71,23 @@
 
 					<div>
 						<div class="col s12 left-align card-header grey-text">Last Updated:</div>
-						<div class="col s12 left-align card-text grey-text text-darken-2" v-if="metric.metrictype == 'Static'">
-							<div>{{ relativeTime(metric.psofia_editeddate, metric) }}</div>
-							<div>{{ metric.psofia_editeddate }}</div>
+						<div v-if="isStatic"
+							class="col s12 left-align card-text grey-text text-darken-2">
+							<div>{{ relativeTime(metricEditDate) }}</div>
+							<div>{{ metricEditDate }}</div>
 						</div>
-						<div v-else class="col s12 left-align card-text grey-text text-darken-2">
-							<div>{{ relativeTime(metric.lastrefreshed, metric) }}</div>
+						<div v-if="isQuery"
+							class="col s12 left-align card-text grey-text text-darken-2">
+							<div>{{ relativeTime(metric.lastrefreshed) }}</div>
 							<div>{{ prettyTime(metric.lastrefreshed) }}</div>
+						</div>
+						<div v-if="!isStatic && !isQuery"
+							class="col s12 left-align card-text grey-text text-darken-2">
+							<div>{{ relativeTime(metricEditDate) }}</div>
+							<div>{{ metricEditDate }}</div>
 						</div>
 					</div>
 				</div>
-			</div>
-		</div>
-
-		<div :id="'details-modal-'+metric.psofia_recordid" class="modal white details-modal">
-			<div class="modal-content">
-				<p class="flow-text">{{ metric.metricname }}</p>
-				<div class="details-table-holder">
-					<DetailsTable :metric="metric" />
-				</div>
-			</div>
-			<div class="modal-footer">
-				<a class="modal-action modal-close waves-effect waves-dark btn-flat">Done</a>
 			</div>
 		</div>
 	</div>
@@ -95,56 +96,165 @@
 <script>
 import Vue from 'vue'
 import axios from 'axios'
-import HistoryGraph from '../widgets/HistoryGraph'
-import HistoryButton from '../widgets/HistoryButton'
-import DetailsTable from '../widgets/DetailsTable'
-import MetricCardValue from '../widgets/MetricCardValue'
 import Moment from 'moment'
+import MetricCardValue from '../widgets/MetricCardValue'
+import HistoryButton from '../widgets/HistoryButton'
+import DetailsButton from '../widgets/DetailsButton'
 export default {
 	name: 'MetricCard',
-	components: {
-		HistoryGraph, DetailsTable, MetricCardValue, HistoryButton
+	components: { MetricCardValue, HistoryButton, DetailsButton },
+	// ONLY USED IN DETAILS COMPONENT - if used in other components, may need to update this component (like metric is stat calc)
+	props: {
+		config: {	// timestamp, editing
+			type: Object,
+			required: true,
+		},
+		metric: {
+			type: Object,
+			required: true,
+		},
 	},
-	props: ['metric','editing'],
 	data () {
 		return {
-			forceUpdater: null,
-			config: {
-				compid: 'history-graph-' + this.metric.psofia_recordid,
-				title: '',
-				uspName: this.metric.uspname,
-				noBorder: true,
-				isVisible: false,
-				callback: this.setLastRefreshed
-			}
+			debug: true,
+
+			needsInit: true,
+			timestamp: null,
+			//forceUpdater: null,
 		}
 	},
 	computed: {
-		location() {
-			return this.$route.params.location
+		// route
+		routeParams() { return this.$route.params },
+		locationParam() { return this.routeParams.location },
+		statusParam() { return this.routeParams.status },
+		idParam() { return this.routeParams.id },
+
+		// state
+		storeIsLoading() { return this.$store.state.isLoading },
+		storeIsRefreshing() { return this.$store.state.softReloading },
+		// getters
+		isStats() { return this.$store.getters.isStats },
+		primaryKey() { return this.$store.getters.psofiaVars.primaryKey },
+		editDateKey() { return this.$store.getters.psofiaVars.editDateKey },
+		// getters with payload
+		metricType() { return this.$store.getters.metricType(this.metric) },
+		metricStatus() { return this.$store.getters.metricStatus(this.metric) },
+
+		modalID() { return 'metriccard-detailsmodal-' + this.metricID },
+
+		onlyMetrics() { return this.locationParam == 'public' || this.locationParam == 'internal' },
+		onlyStats() { return this.locationParam == 'stats' },
+
+		showLocation() { return this.isEditing && this.locationParam == 'admin' },
+
+		// config
+		isEditing() {	// set either in config or by route
+			if(this.config.hasOwnProperty('editing')) return this.config.editing
+			else return (this.routeName == 'DetailsEdit' || this.routeName == 'DetailsWithIdEdit')
 		},
-		isStats() {
-			return this.$route.fullPath.indexOf('stats') != -1
-		}
+		configTimestamp() {
+			if(this.config.hasOwnProperty('timestamp')) return this.config.timestamp
+			else return null
+		},
+		childConfig() {
+			return { timestamp: this.timestamp ? this.timestamp.valueOf() : null, }
+		},
+
+		// metric props
+		metricID() { return this.metric[this.primaryKey] },
+		metricEditDate() { return this.metric[this.editDateKey] },
+		metricIsStat() {
+			if(this.onlyStats) return true
+			else if(this.onlyMetrics) return false
+			else return this.$store.getters.checkIfStat(this.metric)
+		},
+		isQuery() {
+			if(this.metricType) return (this.metricType.toLowerCase() == 'query')
+			else return false
+		},
+		isStatic() {
+			if(this.metricType) return (this.metricType.toLowerCase() == 'static')
+			else return false
+		},
+		typeIndicator() {
+			if(this.isQuery) return { class: 'green-text', icon: 'check', text: 'LIVE' }
+			if(this.isStatic) return { class: 'red-text', icon: 'remove', text: 'STATIC' }
+			return { class: 'orange-text', icon: 'warning', text: this.metricType ? this.metricType.toUpperCase() : 'UNKNOWN' }
+		},
+		showVsYesterday(){ return (this.metric.vsYesterday !== null && this.metric.vsYesterday !== undefined) },
+		vsYesterday() {
+			if (this.metric.vsYesterday === undefined || this.metric.vsYesterday === null) return '--'
+			return (this.metric.vsYesterday >= 0 ? '+' : '') + Number(this.metric.vsYesterday.toFixed(3))
+		},
+		vsClass() {
+			var upGood = this.metric.realtimetrendarrowcolorup == 'green' ? true : false
+			return this.metric.vsYesterday > 0 ? upGood ? 'green-text' : 'red-text' : this.metric.vsYesterday < 0 ? upGood ? 'red-text' : 'green-text' : 'black-text'
+		},
+		/*statusText() {
+			if(!this.metricStatus) return '?'
+			if(this.metricStatus.toLowerCase() == 'deployed') return 'Public'
+			if(this.metricStatus.toLowerCase() == 'review') return 'Review'
+			if(this.metricStatus.toLowerCase() == 'development') return 'Development'
+			return '? - ' + this.metricStatus
+		},*/
+		isSelected() {
+			return (this.idParam && this.metricID === this.idParam)
+		},
 	},
 	watch: {
-		metric() {
-			this.config.uspName = this.metric.uspname
-		}
+		configTimestamp:{
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('configTimestamp changed')
+				if(newVal) this.timestamp = Moment(newVal, "x")
+				else this.timestamp = Moment()
+			},
+		},
+
+		//debug
+		timestamp:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('timestamp changed - ' + newVal)
+			},
+		},
 	},
 	mounted() {
-		$('#details-modal-'+this.metric.psofia_recordid).modal()
-		this.forceUpdater = setInterval(this.$forceUpdate, 10000)
-	},
-	updated() {
+		if(this.debug) console.log('mounted')
+		this.init()
 	},
 	beforeDestroy() {
+		if(this.debug) console.log('destroy')
 		clearInterval(this.forceUpdater)
-		this.forceUpdater = null
+		//this.forceUpdater = null
+		$('#' + this.modalID).modal('destroy')
 	},
 
 	methods: {
-		normalizeCards() {
+		init() {
+			$('#' + this.modalID).modal()
+			//this.forceUpdater = setInterval(this.$forceUpdate, 10000)
+			this.needsInit = false
+		},
+		getCompID(comp){
+			return comp + '-' + this.metricID;
+		},
+
+		gotoMetricForm() {
+			var metricLinks = this.$store.getters.metricLinks(this.metric)
+			window.open(metricLinks.formURL, '_blank');
+		},
+
+		relativeTime(datetime) {
+			return Moment.utc(datetime).fromNow()
+		},
+		prettyTime(datetime) {
+			return Moment.utc(datetime).format('YYYY-MM-DD HH:MM:SS')
+		},
+
+		// never called - ? (Cards aren't same height - maybe didn't work)
+		/*normalizeCards() {
 			return
 			var maxHeight = 0
 			$('#metric-list .card').each(function() {
@@ -152,68 +262,7 @@ export default {
 					maxHeight = $(this).height()
 				}
 			}).height(maxHeight)
-		},
-
-		setLastRefreshed(history) {
-			// Vue.set(this.metric, 'lastrefreshed', history[0].lastimported)
-			this.setVsYesterday(history)
-		},
-
-		setVsYesterday(history) {
-			if (!history[1]) {
-				this.vsValue = ''
-				return
-			}
-			this.vsValue = (history[0].value - history[1].value).toFixed(2)
-			this.vsValue = (this.vsValue >= 0) ? '+' + String(this.vsValue).replace('-', '') : this.vsValue
-			if (this.metric.realtimetrendarrowcolordown_VSVal_ == 'Green') {
-				this.vsClass = (this.vsValue <= 0) ? 'green-text' : 'red-text'
-			}
-			else {
-				this.vsClass = (this.vsValue < 0) ? 'red-text' : 'green-text'
-			}
-		},
-
-		correctValue(value, metric) {
-
-			if (metric.gaugedataformat == 'PERCENT')
-				return Number((value*100).toFixed(2))+'%'
-			else if (metric.prevaluetext == '$') return (value).toFixed(2)
-			else return Number(value.toFixed(2))
-		},
-
-		openHistoryModal() {
-			this.config.isVisible = true
-			this.config.uspName = this.metric.uspname
-			$('#history-modal-'+this.metric.psofia_recordid).modal('open')
-		},
-
-		openDetailsModal() {
-			$('#details-modal-'+this.metric.psofia_recordid).modal('open')
-		},
-
-		relativeTime(datetime, metric) {
-			return Moment(datetime.replace('Z','')).fromNow()
-		},
-
-		prettyTime(time) {
-			return Moment(time.replace('Z','')).format('YYYY-MM-DD HH:MM:SS')
-		},
-
-		vsYesterday(val) {
-			if (val === undefined || val === null) return '--'
-			return (val >= 0 ? '+' : '') + Number(val.toFixed(3))
-		},
-
-		vsClass(metric) {
-			var upGood = metric.realtimetrendarrowcolorup == 'green' ? true : false
-
-			return metric.vsYesterday > 0 ? upGood ? 'green-text' : 'red-text' : metric.vsYesterday < 0 ? upGood ? 'red-text' : 'green-text' : 'black-text'
-		},
-
-		edit(metric) {
-			window.open('https://eservices.cityoflewisville.com/psofia/node/index.html?form=42&recordnumber=' + metric.psofia_recordid)
-		}
+		},*/
 	}
 }
 </script>
@@ -262,7 +311,7 @@ export default {
 .metric-card.active {
 	box-shadow: 0 0 0px 10px black;
 }
-.details-btn, .history-btn, .in-depth-btn {
+.in-depth-btn {
 	border: 3px solid rgba(0,0,0,0.6);
 	padding: 8px 8px;
 	border-radius: 1rem;
@@ -273,15 +322,7 @@ export default {
 	height: auto;
 	display: inline-block;
 }
-.details-btn i, .history-btn i, .in-depth-btn i {
+.in-depth-btn i {
 	margin: 0 8px 0 -4px;
-}
-.modal {
-	/*z-index: 999 !important*/
-}
-.details-modal {
-	/*width: auto;
-	min-width: auto;
-	max-width: 80%;*/
 }
 </style>

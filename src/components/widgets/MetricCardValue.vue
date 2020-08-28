@@ -1,14 +1,17 @@
 <template>
-	<div class="center-align metric-value">
+	<div :id="getCompID('metriccardvalue-outer')"
+		class="center-align metric-value">
 		<div class="white">
-			<div class="loader" v-if="isLoading"></div>
-			<div v-if="!isLoading">
-				<div :id="'metric-gauge-' + metric.psofia_recordid"
-					v-if="(metric.gaugedataformat == 'PERCENT' && metric.metrictype == 'Query') || (metric.metrictype == 'Static' && metric.staticsymbol == 'Gauge')"
+			<div v-if="isLoading" class="loader"></div>
+			<div v-show="!isLoading">
+				<div v-if="showGauge" :id="gaugeID"
 					class="gauge-holder">
 					gauge
 				</div>
-				<p v-else class="kpi-value center-align grey-text text-darken-3" :style="{'font-size': determineFontSize(`${metric.prevaluetext === null ? '' : metric.prevaluetext}${addCommas(currentValue)}${metric.postvaluetext === null ? '' : metric.postvaluetext}`)}">{{ metric.prevaluetext }}{{ addCommas(currentValue) }}{{ metric.postvaluetext }}</p>
+				<p v-if="!showGauge" :id="getCompID('metriccard-value')"
+					class="kpi-value center-align grey-text text-darken-3" :style="{'font-size': determineFontSize(currentValueText)}">
+					{{ currentValueText }}
+				</p>
 			</div>
 		</div>
 	</div>
@@ -18,106 +21,151 @@
 import Vue from 'vue'
 export default {
 	name: 'MetricCardValue',
-	components: {
+	components: {},
+	props: {
+		metric: {
+			type: Object,
+			required: true,
+		},
+		config: {	// timestamp
+			type: Object,
+			required: true,
+		},
 	},
-	props: ['metric'],
 	data () {
 		return {
-			chartdata: {},
-			chartoptions: {},
-			isDrawing: true
+			debug: true,
+
+			needsDraw: true,
+			isDrawing: true,
+
+			gaugeChart: null,
+			chartdata: null,
+			chartoptions: null,
 		}
 	},
 
 	computed: {
-		currentValue() {
-
-			var decPlaces = this.metric.decimalplaces == null ? 2 : this.metric.decimalplaces
-
-			if (this.metric.metrictype == 'Static') {
-				if (this.metric.staticsymbol == 'Gauge') return this.metric.staticgauge
-				if (this.metric.staticsymbol == 'Text') return this.metric.statictext
-			}
-			else if (this.metric.metrictype == 'Query') {
-				if (this.metric.gaugedataformat == 'PERCENT') return Number((this.metric.CurrentValue).toFixed(decPlaces))+'%'
-				else if (this.metric.prevaluetext == '$') return (this.metric.CurrentValue).toFixed(2)
-				else return Number(this.metric.CurrentValue.toFixed(decPlaces))
-			}
-			else return '[[error 1000]]'
-		},
+		// state
+		storeIsLoading() { return this.$store.state.isLoading },
+		storeIsRefreshing() { return this.$store.state.softReloading },
+		googleChartsLoaded() { return this.$store.state.googleChartsLoaded },
+		// getters
+		primaryKey() { return this.$store.getters.psofiaVars.primaryKey },
+		// getters with payload
+		currentValue() { return this.$store.getters.metricValue({metric: this.metric}) },
 
 		// loading icon if store hasnt loaded yet (no current metric loaded)
 		isLoading() {
-			if (!this.metric) return true
-			return this.metric.hasOwnProperty('psofia_recordid') ? false : true
-		}
+			if (this.storeIsLoading) return true
+			if(this.showGauge) return this.needsDraw
+			return false
+		},
+		gaugeID() { return 'metriccard-gauge-' + this.metricID },
+
+		// config
+		configTimestamp() { return this.config.timestamp },
+
+		// metric props
+		metricID() { return this.metric[this.primaryKey] },
+		currentValueText() {
+			if(this.currentValue.error) return '[[error 1000]]'
+			else return this.currentValue.commaStr
+		},
+		showGauge() {
+			if(this.currentValue.error) return false
+			else return this.currentValue.showGauge
+		},
+		percentVal(){
+			if(this.showGauge) return this.currentValue.percentVal
+		},
 	},
 
 	watch: {
-		// this ensures that gauges are drawn on department changes (where this component doesn't necessarily get re-mounted (gets recycled instead))
-		metric() {
-			if ((this.metric.gaugedataformat == 'PERCENT' && this.metric.metrictype == 'Query') || (this.metric.metrictype == 'Static' && this.metric.staticsymbol == 'Gauge')) {
-				google.charts.load('current', {'packages':['gauge']})
-				google.charts.setOnLoadCallback(this.setupGaugeData)
-				$(window).resize(this.resizer)
+		// setup on load (if not loaded on mount)
+		googleChartsLoaded:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(newVal && this.showGauge && this.needsDraw){
+					this.setupGaugeData()
+				}
 			}
-		}
+		},
+		// this ensures that gauges are drawn on department changes (where this component doesn't necessarily get re-mounted (gets recycled instead))
+		metricID:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('metricID changed')
+				this.needsDraw = true
+				if(this.showGauge && this.googleChartsLoaded){
+					this.setupGaugeData()
+				}
+			}
+		},
+		percentVal:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('metric percentVal changed')
+				if(this.showGauge && this.googleChartsLoaded){
+					this.setupGaugeData()
+				}
+			}
+		},
+
+		//debug
+		configTimestamp:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('configTimestamp changed')
+			}
+		},
+		currentValueText:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('metric currentValueText changed')
+			}
+		},
 	},
 
+	// initial draw must be on mounted, cannot do in watch immediate
 	mounted() {
-		// if we need gauges, load google charts up
-		if ((this.metric.gaugedataformat == 'PERCENT' && this.metric.metrictype == 'Query') || (this.metric.metrictype == 'Static' && this.metric.staticsymbol == 'Gauge')) {
-			google.charts.load('current', {'packages':['gauge']})
-			google.charts.setOnLoadCallback(this.setupGaugeData)
-			$(window).resize(this.resizer)
-		}
+		if(this.debug) console.log('mounted')
+		this.init()
 	},
-
 	beforeDestroy() {
+		if(this.debug) console.log('destroy')
+		if(this.gaugeChart) this.gaugeChart.clearChart()
 		$(window).off('resize', this.resizer)
 	},
 
 	methods: {
-		determineFontSize(node) {
-			let len = node.length
-			console.log(node, len)
-			if(len >= 8) {
-				return '2.3rem'
-			} else if(len >= 7) {
-				return '2.7rem'
-			} else if(len >= 6) {
-				return '3rem'
-			} else if(len >= 5) {
-				return '3.5rem'
-			} else return '5rem'
-		},
-
-		addCommas(nStr) {
-			nStr += '';
-			var x = nStr.split('.');
-			var x1 = x[0];
-			var x2 = x.length > 1 ? '.' + x[1] : '';
-			var rgx = /(\d+)(\d{3})/;
-			while (rgx.test(x1)) {
-					x1 = x1.replace(rgx, '$1' + ',' + '$2');
+		init(){
+			$(window).resize(this.resizer)
+			if(this.showGauge && this.googleChartsLoaded){
+				this.setupGaugeData()
 			}
-			return x1 + x2;
+		},
+		getCompID(comp){
+			return comp + '-' + this.metricID;
 		},
 
-		resizer() {
-			if (!this.isDrawing) this.renderGauge()
-		},
 		setupGaugeData() {
-			// grab the metric's value and multiply by 100 (%)
-			var value = null
-			if (this.metric.metrictype == 'Query') value = Number((this.metric.CurrentValue).toFixed(2))
-			else if (this.metric.metrictype == 'Static') value = Number((this.metric.staticgauge*100).toFixed(2))
+			if(this.debug) console.log('setupGaugeData')
+			this.isDrawing = true
+
+			var value = this.currentValue.percentVal
 
 			// add percent sign to value, blank label
-			this.chartdata = new google.visualization.DataTable()
-			this.chartdata.addColumn('string', 'Label')
-			this.chartdata.addColumn('number', 'Value')
-			this.chartdata.addRow(['', {v: value, f: value+'%'}])
+			if(this.needsDraw){
+				this.chartdata = new google.visualization.DataTable()
+				this.chartdata.addColumn('string', 'Label')
+				this.chartdata.addColumn('number', 'Value')
+				this.chartdata.addRow(['', {v: value, f: value+'%'}])
+			}
+			else{
+				this.chartdata.removeRow(0)
+				this.chartdata.addRow(['', {v: value, f: value+'%'}])
+			}
 
 			// get the gauge values for the ranges
 			var gmin = this.metric.gaugegreenfromamount
@@ -138,7 +186,6 @@ export default {
 				rmax = 0
 			}
 
-
 			// google chart options
 			this.chartoptions = {
 				height: 300,
@@ -155,14 +202,43 @@ export default {
 				min: gaugemin,
 				max: gaugemax
 			}
-			this.renderGauge()
+
+			if(this.needsDraw) this.renderGauge()
+			else this.redrawGauge()
 		},
 
 		renderGauge() {
-			var chart = new google.visualization.Gauge(document.getElementById('metric-gauge-'+this.metric.psofia_recordid))
-			chart.draw(this.chartdata, this.chartoptions)
+			this.gaugeChart = new google.visualization.Gauge(document.getElementById(this.gaugeID))
+			this.gaugeChart.draw(this.chartdata, this.chartoptions)
+			this.needsDraw = false
 			this.isDrawing = false
-		}
+		},
+		redrawGauge() {
+			if(this.gaugeChart == null) console.error('gaugeChart null')
+			else{
+				this.gaugeChart.draw(this.chartdata, this.chartoptions)
+				this.isDrawing = false
+			}
+		},
+		resizer() {
+			if(this.showGauge && !this.isDrawing){
+				this.isDrawing = true
+				this.redrawGauge()
+			}
+		},
+
+		determineFontSize(node) {
+			let len = node.length
+			if(len >= 8) {
+				return '2.3rem'
+			} else if(len >= 7) {
+				return '2.7rem'
+			} else if(len >= 6) {
+				return '3rem'
+			} else if(len >= 5) {
+				return '3.5rem'
+			} else return '5rem'
+		},
 	}
 }
 </script>
@@ -176,21 +252,21 @@ export default {
 	font-family: 'Product Sans', 'Roboto';
 	padding: 32px;
 }
-.loader {
-	display: inline-block;
-    border: 6px solid #D1C4E9;
-    border-top: 6px solid #673AB7;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 2s linear infinite;
-}
 .gauge-holder {
 	height: 150px;
 	display: inline-block;
 	margin-bottom: 32px;
 }
 
+.loader {
+	width: 40px;
+    height: 40px;
+	display: inline-block;
+    border: 6px solid #D1C4E9;
+    border-top: 6px solid #673AB7;
+    border-radius: 50%;
+    animation: spin 2s linear infinite;
+}
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
