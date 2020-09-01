@@ -116,7 +116,7 @@ export default {
 	},
 	data () {
 		return {
-			debug: true,
+			debug: false,
 
 			needsInit: true,
 			timestamp: null,

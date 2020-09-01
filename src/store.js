@@ -14,6 +14,7 @@ export const store = new Vuex.Store({
 	state: {
 		debug: true,
 		routeDebug: true,
+		securityDebug: true,
 		isLoading: true,
 		softReloading: true,
 		detailCarouselSoftReloading: true,
@@ -53,6 +54,7 @@ export const store = new Vuex.Store({
 		height: 0,
 
 		psofiaVersion: 'v1',
+		landingURL: 'https://metrics.cityoflewisville.com/',
 		statsURL: 'http://stats.cityoflewisville.com/d/#',
 		metricsURL: 'https://metrics.cityoflewisville.com/d/#',
 	},
@@ -175,18 +177,11 @@ export const store = new Vuex.Store({
 			locations.push({ locationParam: 'admin', display: 'All Sites', sitename: 'all', order: 1 })
 			locations.push({ locationParam: 'public', display: 'Metrics', sitename: 'metricPublic', typeOf: 'Metric', order: (getters.isStats ? 3 : 2) })
 			locations.push({ locationParam: 'internal', display: 'Internal Metrics', sitename: 'metricInternal', typeOf: 'Metric', order: (getters.isStats ? 4 : 3) })
-			locations.push({ locationParam: 'stats', display: 'Stats', sitename: 'stat', typeOf:'Stat', order: (getters.isStats ? 2 : 4) })
-			locations.push({ locationParam: 'data', display: 'Data', sitename: 'data', typeOf: 'Data', order: 5 })
-			locations.push({ locationParam: 'unknown', display: 'Unknown', sitename: null, typeOf: '?', order: 6 })
+			locations.push({ locationParam: 'internalonly', display: 'Internal Only', sitename: 'metricInternal', typeOf: 'Metric', order: (getters.isStats ? 5 : 4) })
+			locations.push({ locationParam: 'stats', display: 'Stats', sitename: 'stat', typeOf:'Stat', order: (getters.isStats ? 2 : 5) })
+			locations.push({ locationParam: 'data', display: 'Data', sitename: 'data', typeOf: 'Data', order: 6 })
+			locations.push({ locationParam: 'unknown', display: 'Unknown', sitename: null, typeOf: '?', order: 7 })
 			return locations
-		},
-		routeStatuses: (state, getters) => {
-			var statuses = []
-			statuses.push({ statusParam: 'deployed', display: 'Public', status: 'deployed', order: 1 })
-			statuses.push({ statusParam: 'review', display: 'Review', status: 'review', order: 2 })
-			statuses.push({ statusParam: 'development', display: 'Development', status: 'development', order: 3 })
-			statuses.push({ statusParam: 'missing', display: 'Missing', status: null, order: 4 })
-			return statuses
 		},
 		routeDepts: (state, getters) => {
 			var depts = []
@@ -197,13 +192,21 @@ export const store = new Vuex.Store({
 			if(!getters.isLoading_categories) depts = depts.concat(getters.fullCategories);
 			return depts
 		},
+		routeStatuses: (state, getters) => {
+			var statuses = []
+			statuses.push({ statusParam: 'deployed', display: 'Public', status: 'deployed', order: 1 })
+			statuses.push({ statusParam: 'review', display: 'Review', status: 'review', order: 2 })
+			statuses.push({ statusParam: 'development', display: 'Development', status: 'development', order: 3 })
+			statuses.push({ statusParam: 'missing', display: 'Missing', status: null, order: 4 })
+			return statuses
+		},
 		routeLocationByLocationParam: (state, getters) => (locationParam) => { return getters.routeLocations.find(routeLocation => routeLocation.locationParam == locationParam) },
 		routeLocationBySitename: (state, getters) => (sitename) => { return getters.routeLocations.find(routeLocation => routeLocation.sitename == sitename) },
 		fullCategoryByDeptParam: (state, getters) => (deptParam) => {
 			if(getters.isLoading_categories) return { id: 'loading', display: 'Loading', deptParam: deptParam }
-			if(deptParam == 'all') return state.categoryAll
-			return getters.fullCategories.find(category => category.deptParam == deptParam)
+			return getters.routeDepts.find(category => category.deptParam == deptParam)
 		},
+		fullStatusByStatusParam: (state, getters) => (statusParam) => { return getters.routeStatuses.find(status => status.statusParam == statusParam) },
 // filtered list of metrics
 		checkAllMetricCategories: (state, getters) => (payload) => {	// payload: metric, category
 			if(payload.category.id.toLowerCase() == 'none'){
@@ -240,22 +243,22 @@ export const store = new Vuex.Store({
 				if(payload.hasOwnProperty('statusParam') || payload.hasOwnProperty('status')){
 					var metricStatus = getters.metricStatus(metric)
 					if( status && (!metricStatus || metricStatus.toLowerCase() != status.toLowerCase()) ) return false
-					else if(!status && metricStaus) return false
+					else if(!status && metricStatus) return false
 				}
 				if(payload.hasOwnProperty('routeLocation') || payload.hasOwnProperty('locationParam') || payload.hasOwnProperty('sitename')){
 					if(routeLocation.sitename != 'all'){
 						var metricSitename = getters.metricSitename(metric)
 						if(routeLocation.sitename && !metricSitename) return false
 						if(!routeLocation.sitename && metricSitename) return false
-						// internal returns both public & internal
-						if(routeLocation.sitename.toLowerCase() == 'metricinternal'){
+						// internal returns both public & internal (unless internal only)
+						if(routeLocation.sitename && routeLocation.sitename.toLowerCase() == 'metricinternal' && routeLocation.locationParam.toLowerCase() != 'internalonly'){
 							// if edit view (not deployed), show only exact match
 							if((payload.hasOwnProperty('statusParam') || payload.hasOwnProperty('status')) && status.toLowerCase() != 'deployed'){
 								if(metricSitename.toLowerCase() != routeLocation.sitename.toLowerCase()) return false
 							}
 							else if (metricSitename.toLowerCase() != 'metricpublic' && metricSitename.toLowerCase() != 'metricinternal') return false
 						}
-						else if(metricSitename.toLowerCase() != routeLocation.sitename.toLowerCase()) return false
+						else if(routeLocation.sitename && metricSitename.toLowerCase() != routeLocation.sitename.toLowerCase()) return false
 					}
 				}
 				if(payload.hasOwnProperty('category') || payload.hasOwnProperty('deptParam')){
@@ -320,7 +323,7 @@ export const store = new Vuex.Store({
 			return state.metrics.some(metric => {
 				if(payload.hasOwnProperty('statusParam')){
 					var metricStatus = getters.metricStatus(metric)
-					if(!status && !metricStaus) return true
+					if(!status && !metricStatus) return true
 				}
 				if(payload.hasOwnProperty('routeLocation')){
 					var metricSitename = getters.metricSitename(metric)
@@ -513,6 +516,7 @@ export const store = new Vuex.Store({
 			state.fetchParams = Object.assign(state.fetchParams, payload)
 		},
 		setDetailCarouselType(state, payload) {		// set in Dashboard.vue, every component loads with Dashboard.vue
+			if(state.debug) console.log(payload)
 			state.detailCarouselType = payload
 		},
 		setGoogleChartsLoaded(state, payload) {
@@ -529,6 +533,7 @@ export const store = new Vuex.Store({
 			state.userEmail = payload.email;
 		},
 		logout(state){
+			if(state.routeDebug) console.log('logout')
 			state.userEmail = '';
 		},
 
@@ -538,6 +543,12 @@ export const store = new Vuex.Store({
 	// usage: this.$store.dispatch('actionName')
 	actions: {
 		updateFetchParams(context, payload){
+			var hasChange = false, hasChangeC = false
+			var diff = Moment().diff(context.state.lastRefreshed) 
+			if(context.state.debug) console.log(diff)
+			//if(context.state.debug) console.log(payload)
+
+			// if params have changed (or initial), set store params; clear metrics if not master
 			if( payload.hasOwnProperty('params') && (context.state.fetchParams.sitename != payload.params.sitename || context.state.fetchParams.status != payload.params.status || context.state.fetchParams.type != payload.params.type || context.state.fetchParams.master != payload.params.master) ){			
 				// master 'all' unchanged only updates fetch params, return from ws is the same so no need to clear & call again immediately
 				if(context.state.fetchParams.master == 'all' && payload.params.master == 'all'){
@@ -546,13 +557,22 @@ export const store = new Vuex.Store({
 				else{
 					context.commit('setFetchParams', payload.params)
 					if(context.state.metrics.length != 0) context.commit('clearMetrics')
-					context.dispatch('fetchPerfMeasures')
+					hasChange = true
 				}
 			}
-			// only for details page
+			// fetch data if params changed or >5 min since last fetch
+			if(payload.hasOwnProperty('params') && (hasChange || diff >= 300000)){
+				context.dispatch('fetchPerfMeasures')
+			}
+
+			// only for details page, if carousel type has changed (or initial); clear carousel stats/metrics
 			if(payload.hasOwnProperty('detailCarouselType') && context.state.detailCarouselType != payload.detailCarouselType){
 				context.commit('setDetailCarouselType', payload.detailCarouselType)
 				context.commit('clearDetailCarousel')
+				hasChangeC = true
+			}
+			// fetch data if carousel type changed or >5 min since last fetch
+			if(payload.hasOwnProperty('detailCarouselType') && (hasChangeC || diff >= 300000)){
 				context.dispatch('fetchDetailCarousel')
 			}
 		},
@@ -561,8 +581,9 @@ export const store = new Vuex.Store({
 			function get(context) {
 				if(context.state.debug) console.log('fetchPerfMeasures')
 				context.state.softReloading = true
+				// webservice should be reordered so master = 'all' check comes before sitename check
 				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Master', {
-					sitename: context.state.fetchParams.sitename,
+					sitename: context.state.fetchParams.master == 'all' ? '' : context.state.fetchParams.sitename,
 					status: context.state.fetchParams.status,
 					type: context.state.fetchParams.type,
 					master: context.state.fetchParams.master
@@ -578,9 +599,10 @@ export const store = new Vuex.Store({
 
 			if (context.state.interval) context.state.interval = clearInterval(context.state.interval) // only keep one timer
 			get(context)
-			context.state.interval = setInterval(() => {
+			// no longer any need to refresh details page
+			/*context.state.interval = setInterval(() => {
 				get(context)
-			}, 300000)// 60000*5)
+			}, 300000)// 60000*5)*/
 		},
 		fetchDetailCarousel(context) {
 			// determine which carousel to fetch
@@ -608,9 +630,10 @@ export const store = new Vuex.Store({
 
 			if (context.state.carouselInterval) context.state.carouselInterval = clearInterval(context.state.carouselInterval) // only keep one timer
 			get(context)
-			context.state.carouselInterval = setInterval(() => {
+			// no longer any need to refresh details page
+			/*context.state.carouselInterval = setInterval(() => {
 				get(context)
-			}, 300000)// 60000*5)
+			}, 300000)// 60000*5)*/
 		},
 		fetchMetricsCarousel(context) {
 
@@ -633,9 +656,10 @@ export const store = new Vuex.Store({
 
 			if (context.state.carouselInterval) context.state.carouselInterval = clearInterval(context.state.carouselInterval) // only keep one timer
 			get(context)
-			context.state.carouselInterval = setInterval(() => {
+			// no longer any need to refresh details page
+			/*context.state.carouselInterval = setInterval(() => {
 				get(context)
-			}, 300000)// 60000*5)
+			}, 300000)// 60000*5)*/
 		},
 		fetchLandingPageCarousel(context) {
 

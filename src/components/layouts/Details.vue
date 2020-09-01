@@ -35,13 +35,14 @@
 				<li class="search">
 					<SearchMetricsBar class="searchbar" :config="searchconfig" />
 				</li>
-				<li class="divider"></li>
 
 				<li v-if="isEditing" class="locations no-padding">
 					<ul>
+						<li class="divider"></li>
+
 						<li class="header">Location</li>
 
-						<li v-if="allLocationsDisabled" class="header">{{ location_all.display }}<span class="right">{{ getCountByCategory(location_all) }}</span></li>
+						<li v-if="allLocationsDisabled" class="header">{{ location_all.display }}<span class="right">{{ getCountByLocation(location_all) }}</span></li>
 
 						<li v-for="routeLocation in filteredRouteLocations" @click="setLocationParam(routeLocation)"
 							class="pointy left-align" :class="{ 'col-purple': (routeLocation.locationParam == locationParam) }">
@@ -49,20 +50,26 @@
 								{{ routeLocation.display }}<span class="right">{{ getCountByLocation(routeLocation) }}</span>
 							</a>
 						</li>
-
-						<li class="divider"></li>
 					</ul>
 				</li>
 
 				<li class="categories no-padding">
 					<ul>
-						<li v-if="isEditing && allCategoriesDisabled" class="header">All Categories<span class="right">{{ getCountByCategory(category_all) }}</span></li>
+						<li v-if="isEditing">
+							<ul>
+								<li class="divider"></li>
 
-						<li v-for="category in filteredRouteDeptsByType(null)" @click="setDeptParam(category)"
-							class="pointy left-align" :class="{ 'col-purple': (category.deptParam == deptParam) }">
-							<a :class="{ 'white-text': (category.deptParam == deptParam), 'col-purple-text': (category.deptParam != deptParam) }">
-								{{ category.id == 'all' ? 'All Categories' : 'No Category' }}<span class="right">{{ getCountByCategory(category) }}</span>
-							</a>
+								<li class="header">Category</li>
+
+								<li v-if="allCategoriesDisabled" class="header">All Categories<span class="right">{{ getCountByCategory(category_all) }}</span></li>
+
+								<li v-for="category in filteredRouteDeptsByType(null)" @click="setDeptParam(category)"
+									class="pointy left-align" :class="{ 'col-purple': (category.deptParam == deptParam) }">
+									<a :class="{ 'white-text': (category.deptParam == deptParam), 'col-purple-text': (category.deptParam != deptParam) }">
+										{{ category.id == 'all' ? 'All Categories' : 'No Category' }}<span class="right">{{ getCountByCategory(category) }}</span>
+									</a>
+								</li>
+							</ul>
 						</li>
 
 
@@ -91,6 +98,7 @@
 						<div v-if="currentCategory && currentCategory.id != 'loading'" class="deptname blue-grey-text text-darken-2">
 							{{ currentCategory.display }}
 							<small class="grey-text"> ({{ countMetrics_shown }})</small>
+							<small v-if="isEditing" class="grey-text">[{{currentRouteLocation.display}} - {{currentStatus.display}}]</small>
 						</div>
 					<!--</transition>-->
 				</div>
@@ -154,14 +162,14 @@ export default {
 	},
 	props: [],
 	beforeRouteUpdate (to, from, next) {
-		if(this.debug) console.log(to.name)
-		if(this.debug) console.log('beforeRouteUpate - Details')
+		if(this.routeDebug) console.log(to.name)
+		if(this.routeDebug) console.log('beforeRouteUpate - Details')
 		var newParams = to.params
 		var needsUpdate = false
 		//checkViewParams
 		if(to.name == 'Details' || to.name == 'DetailsWithId'){
 			// admin, dept, unknown redirects to edit automatically
-			if(newParams.location == 'admin' || newParams.location == 'data' || newParams.location == 'unknown'){
+			if(newParams.location == 'admin' || newParams.location == 'data' || newParams.location == 'unknown' || newParams.location == 'internalonly'){
 				newParams = Object.assign(newParams, {status: 'deployed'})
 				if(newParams.id) next({ name: 'DetailsWithIdEdit', params: newParams })
 				else next({ name: 'DetailsEdit', params: newParams })
@@ -183,20 +191,24 @@ export default {
 				else{
 					if(newParams.location == 'internal'){
 						if(this.$store.state.userEmail){
-							console.log('email in store')
+							if(this.routeDebug) console.log('email in store')
 							next()
 						}
 						else{
-							if(sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail){
-								console.log('already auth')
-								this.$store.commit('login', { email: localStorage.colEmail })
+							if(this.securityDebug || (sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail)){
+								if(this.securityDebug) this.$store.commit('login', { email: 'clarson@cityoflewisville.com' })
+								else{
+									if(this.routeDebug) console.log('already auth')
+									this.$store.commit('login', { email: localStorage.colEmail })
+								}
 								next()
 							}
 							else{
-								console.log('needs auth')
+								if(this.routeDebug) console.log('needs auth')
 								var redirectOnAuth = to.fullPath;
 								var redirectOnFail = redirectOnAuth
-								redirectOnFail = redirectOnFail.replace('internal', 'public')
+								redirectOnFail = redirectOnFail.substring(0, redirectOnFail.indexOf('/edit'))
+								if(!this.isStats) redirectOnFail = redirectOnFail.replace('internal', 'public')
 								next({ path: '/login/1', query: { redirect: redirectOnAuth, failredirect: redirectOnFail } })
 							}
 						}
@@ -207,7 +219,7 @@ export default {
 		}
 		else if(to.name == 'DetailsEdit' || to.name == 'DetailsWithIdEdit'){
 			// clean location param
-			if(newParams.location != 'admin' && newParams.location != 'public' && newParams.location != 'stats' && newParams.location != 'internal' && newParams.location != 'data' && newParams.location != 'unknown'){
+			if(newParams.location != 'admin' && newParams.location != 'public' && newParams.location != 'stats' && newParams.location != 'internal' && newParams.location != 'internalonly' && newParams.location != 'data' && newParams.location != 'unknown'){
 				if(this.isStats) newParams.location = 'stats'
 				else newParams.location = 'public'
 				needsUpdate = true
@@ -224,7 +236,7 @@ export default {
 					else newParams.location = 'public'
 					needsUpdate = true
 				}
-				if(newParams.dept == 'all'){
+				if(newParams.dept == 'all' && newParams.location != 'unknown' && newParams.location != 'internalonly'){
 					newParams.dept = 'citywide'
 					needsUpdate = true
 				}
@@ -232,17 +244,20 @@ export default {
 			if(needsUpdate) next({ name: to.name, params: newParams })
 			else{
 				if(this.$store.state.userEmail){
-					console.log('email in store')
+					if(this.routeDebug) console.log('email in store')
 					next()
 				}
 				else{
-					if(sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail){
-						console.log('already auth')
-						this.$store.commit('login', { email: localStorage.colEmail })
+					if(this.securityDebug || (sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail)){				
+						if(this.securityDebug) this.$store.commit('login', { email: 'clarson@cityoflewisville.com' })
+						else{
+							if(this.routeDebug) console.log('already auth')		
+							this.$store.commit('login', { email: localStorage.colEmail })
+						}
 						next()
 					}
 					else{
-						console.log('needs auth')
+						if(this.routeDebug) console.log('needs auth')
 						var redirectOnAuth = to.fullPath;
 						var redirectOnFail = redirectOnAuth
 						var i = redirectOnFail.indexOf('/edit')
@@ -251,6 +266,7 @@ export default {
 						var failLocation = 'public'
 						if(this.isStats) failLocation = 'stats'
 						if(to.params.location == 'internal') redirectOnFail = redirectOnFail.replace('internal', 'public')
+						if(to.params.location == 'internalonly') redirectOnFail = redirectOnFail.replace('internalonly', 'public')
 						else if(to.params.location == 'admin') redirectOnFail = redirectOnFail.replace('admin', failLocation)
 						else if(to.params.location == 'data') redirectOnFail = redirectOnFail.replace('data', failLocation)
 						else if(to.params.location == 'unknown') redirectOnFail = redirectOnFail.replace('unknown', failLocation)
@@ -273,7 +289,6 @@ export default {
 
 			showStatusParam: 'deployed',
 			scrolled: false,
-			landingURL: 'https://metrics.cityoflewisville.com/',
 			extraLinks: [
 				{
 					for: 'Citywide',
@@ -316,15 +331,17 @@ export default {
 		locationParam() { return this.routeParams.location },
 		deptParam() { return this.routeParams.dept },
 		idParam() { return this.routeParams.id },
-		statusParam() { return this.routeParams.status },
+		statusParam() { return this.routeParams.status },	//return this.debug ? 'deployed' : this.routeParams.status
 
 		// store.state
 		storeDebug() { return this.$store.state.debug },
 		routeDebug() { return this.$store.state.routeDebug },
+		securityDebug() { return this.$store.state.securityDebug },
 		storeIsLoading() { return this.$store.state.isLoading },
 		storeIsRefreshing() { return this.$store.state.softReloading },
 		refreshedAt() { return this.$store.state.fromNow },
 		underLarge() { return this.$store.state.underLarge },
+		landingURL() { return this.$store.state.landingURL },
 
 		// store.getters
 		isStats() { return this.$store.getters.isStats },
@@ -339,11 +356,12 @@ export default {
 		carouselIsRefreshing() { return this.$store.state.detailCarouselSoftReloading },
 
 		// store.getters with params
-		currentCategory() { return this.$store.getters.fullCategoryByDeptParam(this.deptParam) },
 		currentRouteLocation() { return this.$store.getters.routeLocationByLocationParam(this.locationParam) },
+		currentCategory() { return this.$store.getters.fullCategoryByDeptParam(this.deptParam) },
+		currentStatus() { return this.$store.getters.fullStatusByStatusParam(this.statusParam) },
 		
 		isLoading() { return this.needsInit || this.storeIsLoading },
-		isEditing() { return (this.routeName == 'DetailsEdit' || this.routeName == 'DetailsWithIdEdit') },
+		isEditing() { return (this.routeName == 'DetailsEdit' || this.routeName == 'DetailsWithIdEdit') },		// || this.debug
 
 		params() {
 			var sitename = '', status = 'deployed', type = '', master = ''
@@ -395,6 +413,7 @@ export default {
 				if(this.statusParam == 'deployed'){
 					if(this.locationParam == 'public' || this.locationParam == 'internal') type = 'statsCarousel'
 					else if(this.locationParam == 'stats') type = 'metricsCarousel'
+					else type = null
 				}
 			}
 			return type
@@ -416,7 +435,7 @@ export default {
 			else return true
 		},
 		allCategoriesDisabled() {
-			if(this.isEditing) return (this.statusParam == 'deployed')
+			if(this.isEditing) return (this.statusParam == 'deployed' && this.locationParam != 'unknown' && this.locationParam != 'internalonly')
 			else return true
 		},
 		includeLocation_data() { if(this.isEditing) return this.$store.getters.checkInclude({ routeLocation: this.location_data }) },
@@ -441,7 +460,7 @@ export default {
 		},
 		filteredRouteDepts() {
 			return this.routeDepts.filter(routeDept => {
-				if(routeDept.deptParam == 'admin') return !(this.allLocationsDisabled)
+				if(routeDept.deptParam == 'all') return !(this.allCategoriesDisabled)
 				else if(routeDept.deptParam == 'missing') return (this.isEditing && (this.deptParam == 'missing' || this.includeLocation_data))
 				else return true
 			})
@@ -493,6 +512,7 @@ export default {
      		deep: true
 		},
 		'$route' (to, from) {
+			if(this.debug) console.log(this.all)
 			if(to.name == 'Details' || to.name == 'DetailsWithId' || to.name == 'DetailsEdit' || to.name == 'DetailsWithIdEdit'){
 				if(from.name != 'Details' || from.name != 'DetailsWithId' || from.name != 'DetailsEdit' || from.name != 'DetailsWithIdEdit'){
 					if(this.routeDebug) console.log('Route Changed - Enter')
@@ -533,7 +553,7 @@ export default {
 				}
 				if(newVal == 'deployed'){	// on edit view deployed, can't goto all locations or all categories
 					if(newParams.location == 'admin') newParams.location = this.isStats ? 'stat' : 'public'
-					if(newParams.dept == 'all') newParams.dept = 'citywide'
+					if(newParams.dept == 'all' && newParams.location != 'unknown' && this.locationParam != 'internalonly') newParams.dept = 'citywide'
 				}
 				// remove id
 					if(newRouteName.indexOf('WithId')) newRouteName = newRouteName.replace('WithId', '')
@@ -595,7 +615,7 @@ export default {
 		updateFetchParams() {
 			var payload = {
 				params: this.params,
-				detailCarouselType: this.detailCarouselType,
+				detailCarouselType: this.carouselType,
 			}
 			if(this.debug) console.log('Update fetch params')
 			this.$store.dispatch('updateFetchParams', payload)
@@ -613,8 +633,9 @@ export default {
 			this.fetchDetailCarousel()
 		},
 		fetchDetailCarousel(){
+			if(this.debug) console.log('Fetch carousel')
 			if(this.includeCarousel){
-				if(this.debug) console.log('Fetch carousel')
+				if(this.debug) console.log('Fetch carousel2')
 				this.$store.commit('clearDetailCarousel')
 				this.$store.dispatch('fetchDetailCarousel')
 			}
@@ -625,7 +646,7 @@ export default {
 				return
 			}
 			var selectedMetric = this.metrics_shown.find(metric => metric[this.primaryKey] == this.idParam)
-			if(selectedMetric) this.scrollToMetric('#metric-card-' + this.idParam)
+			if(selectedMetric) this.scrollToMetric('#metriccard-' + this.idParam)
 			else{
 				this.needsInit_scroll = false
 				console.warn('no metric found for id')
@@ -638,7 +659,7 @@ export default {
 			})
 		},
 		scrollToCarousel() {
-			$(window).scrollTop($('detail_carousel').offset().top-20)
+			$(window).scrollTop($('#details_carousel').offset().top-20)
 		},
 
 		filteredRouteDeptsByType(type) {
@@ -654,7 +675,7 @@ export default {
 		setDeptParam(category) {
 			if(category.deptParam != this.deptParam){
 				// hide all departments deployed page
-				if(category.deptParam == 'all' && allCategoriesDisabled) return
+				if(category.deptParam == 'all' && this.allCategoriesDisabled) return
 				else{
 					var newParams = this.routeParams
 					var newRouteName = this.routeName
@@ -669,13 +690,13 @@ export default {
 		setLocationParam(routeLocation){
 			if(this.isEditing && routeLocation.locationParam != this.locationParam){
 				// hide all locations deployed page
-				if(routeLocation.locationParam == 'admin' && allLocationsDisabled) return
+				if(routeLocation.locationParam == 'admin' && this.allLocationsDisabled) return
 				else{
 					var newParams = this.routeParams
 					var newRouteName = this.routeName
 					newParams.location = routeLocation.locationParam
 					// on view review/development/missing, goto all categories on location change
-						if(newParams.status != 'deployed') newParams.dept = 'all'
+						if(newParams.status != 'deployed' || newParams.location == 'unknown' || newParams.location == 'internalonly') newParams.dept = 'all'
 					// remove id
 						if(newRouteName.indexOf('WithId')) newRouteName = newRouteName.replace('WithId', '')
 						if(newParams.id) delete newParams.id
@@ -694,7 +715,7 @@ export default {
 				}
 				if(statusParam == 'deployed'){
 					if(newParams.location == 'admin') newParams.location = this.isStats ? 'stats' : 'public'
-					if(newParams.dept == 'all') newParams.dept = 'citywide'
+					if(newParams.dept == 'all' && newParams.location != 'unknown' && newParams.location != 'internalonly') newParams.dept = 'citywide'
 				}
 				// remove id
 					if(newRouteName.indexOf('WithId')) newRouteName = newRouteName.replace('WithId', '')

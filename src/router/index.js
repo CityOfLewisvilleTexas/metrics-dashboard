@@ -35,14 +35,14 @@ Vue.use(Router)
 const router = new Router({
   routes: [
     { path: '/', redirect: { name: 'Default' } },
-    { path: '/dashboard/login/:required',
+    { path: '/login/:required',
         name: 'Login',
         component: Login,
         meta: {
             title: 'Login',
         }
     },
-    { path: 'account/:required',
+    { path: '/account/:required',
         name: 'Account',
         component: Login,
         meta: {
@@ -224,8 +224,9 @@ function checkAuth (to, from, next){
   }
   else{
     // if already authenticated && has token & email, store user, allow
-    if(sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail){
-      store.commit('login', { email: localStorage.colEmail })
+    if(store.state.securityDebug || (sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail)){
+      if(store.state.securityDebug) store.commit('login', { email: 'clarson@cityoflewisville.com' })
+      else store.commit('login', { email: localStorage.colEmail })
       next()
     }
     // else push to login page, immediately require login, then return or redirect
@@ -246,11 +247,12 @@ function checkAuth (to, from, next){
         var failLocation = 'public'
         if(store.getters.isStats) failLocation = 'stats'
         if(to.params.location == 'internal') redirectOnFail = redirectOnFail.replace('internal', 'public')
+        else if(to.params.location == 'internalonly') redirectOnFail = redirectOnFail.replace('internalonly', 'public')
         else if(to.params.location == 'admin') redirectOnFail = redirectOnFail.replace('admin', failLocation)
         else if(to.params.location == 'data') redirectOnFail = redirectOnFail.replace('data', failLocation)
         else if(to.params.location == 'unknown') redirectOnFail = redirectOnFail.replace('unknown', failLocation)
       }
-      next({ path: '/login/1', query: { redirect: redirectOnAuth, failredirect: redirectOnFail } })
+      else next({ path: '/login/1', query: { redirect: redirectOnAuth, failredirect: redirectOnFail } })
     }
   }
 }
@@ -263,7 +265,7 @@ function checkViewParams (to, from, next) {
   var isStats = store.getters.isStats
   var needsUpdate = false
   // admin, dept, unknown redirects to edit automatically
-  if(newParams.location == 'admin' || newParams.location == 'data' || newParams.location == 'unknown'){
+  if(newParams.location == 'admin' || newParams.location == 'data' || newParams.location == 'unknown' || newParams.location == 'internalonly'){
     newParams = Object.assign(newParams, {status: 'deployed'})
     if(newParams.id) next({ name: 'DetailsWithIdEdit', params: newParams })
     else next({ name: 'DetailsEdit', params: newParams })
@@ -300,7 +302,7 @@ function checkEditParams (to, from, next) {
   var isStats = store.getters.isStats
   var needsUpdate = false
   // clean location param
-  if(newParams.location != 'admin' && newParams.location != 'public' && newParams.location != 'stats' && newParams.location != 'internal' && newParams.location != 'data' && newParams.location != 'unknown'){
+  if(newParams.location != 'admin' && newParams.location != 'public' && newParams.location != 'stats' && newParams.location != 'internal' && newParams.location != 'internalonly' && newParams.location != 'data' && newParams.location != 'unknown'){
     if(isStats) newParams.location = 'stats'
     else newParams.location = 'public'
     needsUpdate = true
@@ -318,7 +320,7 @@ function checkEditParams (to, from, next) {
       else newParams.location = 'public'
       needsUpdate = true
     }
-    if(newParams.dept == 'all'){
+    if(newParams.dept == 'all' && newParams.location != 'unknown' && newParams.location != 'internalonly'){
       newParams.dept = 'citywide'
       needsUpdate = true
     }

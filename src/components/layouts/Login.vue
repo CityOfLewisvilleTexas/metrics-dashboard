@@ -4,7 +4,6 @@
             <div class="navbar-fixed">
                 <nav>
                     <div id="top-nav" class="nav-wrapper col-purple left-align">
-                        <a data-activates="slide-out" id="details-side" class="button-collapse"><i class="material-icons">menu</i></a>
                         <div class="logo"></div>
                         <div class="brand-logo white-text text-darken-3">City of Lewisville</div>
                             <li v-if="!underLarge">
@@ -26,18 +25,12 @@
                     <div class="double-bounce2"></div>
                 </div>
 
-                <div class="modal white">
+                <div :id="modalID" class="modal white">
                     <div class="modal-content">
-                        <div class="left-align card-title valign-wrapper">
-                            {{ title }}
-                        </div>
-                        <div class="left-align card-subtitle valign-wrapper">
-                            {{ statusDisplay }}
-                        </div>
-                        <div class="left-align card-text valign-wrapper">
-                            {{ message }}
-                            {{userEmailDisplay}}
-                        </div>
+                        <p class="flow-text">{{ title }}</p>
+                        <p>{{ statusDisplay }}</p>
+                        <p>{{ message }}</p>
+                        <p>{{userEmailDisplay}}</p>
                     </div>
 
                     <div class="modal-footer">
@@ -53,7 +46,6 @@
                             class="modal-action waves-effect waves-dark btn-flat">
                             {{status == 2 ? 'Change Account' : 'Log In'}}
                         </a>
-                        <v-spacer></v-spacer>
                         <a v-if="loginRequired && (status == 0 || status == 2)" @click="gotoFailRedirect"
                             class="modal-action waves-effect waves-dark btn-flat">
                             Cancel
@@ -96,12 +88,12 @@ export default {
 
     data: function(){
         return{
-            debug: false,
+            debug: true,
             statusDebug: [],
-            isLoading: true,
-            sharedState: store.state,
 
-            dialog: false,
+            isLoading: true,
+            needsMatInit: true,
+
             authImmediate: false,
             status: null,
             countCallAuth: 0,
@@ -124,29 +116,33 @@ export default {
             handler: function(newVal, oldVal) {
                 if(this.debug) this.statusDebug.unshift(newVal)
                 if(this.debug) console.log('\tstatus - ' + this.statusDebug)
-                /*if(newVal == 3){
-                    this.dialog = false
+                if(newVal == 3){
+                    $('#' + this.modalID).modal('close')
                     this.gotoRedirect()
-                }*/
+                }
             },
         },
     },
 
 
     computed: {
+        // route
+        routeName: function(){ if(this.$route.hasOwnProperty('name') && this.$route.name) return this.$route.name },
         routeParams: function(){ if(this.$route.hasOwnProperty('params') && this.$route.params) return this.$route.params },
         routeQuery: function(){ if(this.$route.hasOwnProperty('query') && this.$route.query) return this.$route.query },
         requiredParam: function(){ if(this.routeParams && this.routeParams.hasOwnProperty('required')) return this.routeParams.required },
         queryRedirect: function(){ if(this.routeQuery && this.routeQuery.hasOwnProperty('redirect') && this.routeQuery.redirect) return this.routeQuery.redirect },
         queryFailRedirect: function(){ if(this.routeQuery && this.routeQuery.hasOwnProperty('failredirect') && this.routeQuery.failredirect) return this.routeQuery.failredirect },
 
+        // store.state
         storeDebug: function(){ return this.$store.state.debug },
         routeDebug: function(){ return this.$store.state.routeDebug },
+        underLarge() { return this.$store.state.underLarge },
+        landingURL() { return this.$store.state.landingURL },
         userEmail: function(){ return this.$store.state.userEmail },
 
-        loginRequired: function(){
-            return this.requiredParam == 1;
-        },
+        modalID: function(){ return 'login-modal'; },
+        loginRequired: function(){ return this.requiredParam == 1; },
 
         // 0: never signed in; 1: signed in, no localstorage (not @col), 2: email only (no AD account), 1: user fully logged in (email & AD)
         userStatus: function(){
@@ -194,44 +190,53 @@ export default {
 
 
     created: function(){
-        if(this.debug) console.log('\t\tLOGIN - Created');
+        if(this.debug) console.log('\t\tCreated');
     },
     mounted: function(){
-        if(this.debug) console.log('\t\tLOGIN - Mounted');
-        this.initialize();
+        if(this.debug) console.log('\t\tMounted');
+        this.init();
     },
     beforeDestroy: function() { 
-        if(this.debug) console.log('\t\tLOGIN - Destroy');
+        if(this.debug) console.log('\t\tDestroy');
         // clear timeouts
-        if(this.checkTimeout) clearTimeout(checkTimeout)
-        if(this.redirectTimeout) clearTimeout(redirectTimeout)
+        if(this.checkTimeout) clearTimeout(this.checkTimeout)
+        if(this.redirectTimeout) clearTimeout(this.redirectTimeout)
+        $('#' + this.modalID).modal('destroy')
     },
 
 
     methods: {
         routeChanged: function(){
             if(this.debug) console.log('\trouteChanged')
-            this.initialize();
+            this.init();
         },
-        initialize: function(){
+        init: function(){
             var self = this
-            if(this.debug) console.log('\tinitialize - ' + this.routeName + (this.routeParams ? ('\nparams: ' + JSON.stringify(this.routeParams)) : '') + (this.routeQuery ? ('\nquery: ' + this.routeQuery) : '') );
+            if(this.debug) console.log('\tinit - Login' + (this.routeParams ? ('\nparams: ' + JSON.stringify(this.routeParams)) : '') + (this.routeQuery ? ('\nquery: ' + this.routeQuery) : '') );
             if(this.routeName == 'Login'){
                 this.authImmediate = true;
                 this.$router.push({ path: '/account/' + this.requiredParam, query: this.routeQuery })
             }
             else{
+                if(this.needsMatInit) this.initModal()
                 if(this.authImmediate){
                     if(this.debug) console.log('call immediately')
-                    //this.callAuthenticate();
+                    this.callAuthenticate();
+                    //$('#' + this.modalID).modal('open')
+                    //this.checkStorage()
                 }
                 else{
-                    this.dialog = true
+                    $('#' + this.modalID).modal('open')
                     if(this.debug) console.log('call on click')
                     this.checkStorage()
                 }
             }
         },
+        initModal(){
+            $('#' + this.modalID).modal()
+            this.needsMatInit = false
+        },
+
         checkStorage: function(){
             var self = this
             if(sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail) this.status = 3
@@ -249,9 +254,11 @@ export default {
             authenticate()
         },
         gotoRedirect: function(){
+            $('#' + this.modalID).modal('close')
             this.$router.replace({ path: this.queryRedirect })
         },
         gotoFailRedirect: function(){
+            $('#' + this.modalID).modal('close')
             this.$router.replace({ path: this.queryFailRedirect })
         },
         login: function(){
@@ -276,6 +283,16 @@ export default {
 </script>
 
 <style scoped>
+
+/* COLORS */
+
+.col-purple {
+    background-color: #5A348D !important;
+}
+.col-purple-text {
+    color: #5A348D !important;
+}
+
 .pointy {
     cursor: pointer;
 }
