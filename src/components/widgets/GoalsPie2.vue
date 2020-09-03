@@ -14,7 +14,7 @@
 import Vue from 'vue'
 import Chart from 'chart.js'
 export default {
-	name: 'GoalsPie2',
+	name: 'GoalsPie2',					// USED IN Default.vue, Donna.vue
 	components: {},
 	props: {
 		// compid, noBackground, dept(? - display)

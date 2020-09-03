@@ -20,7 +20,7 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'MetricCardValue',
+	name: 'MetricCardValue',					// USED IN MetricCard.vue -> Details.vue
 	components: {},
 	props: {
 		metric: {

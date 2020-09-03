@@ -12,7 +12,7 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'ESRIMap',
+	name: 'ESRIMap',					// USED IN Default.vue
 	components: {},
 	props: {
 		config: {
@@ -32,6 +32,7 @@ export default {
 
 	// START
 	mounted() {
+		if(this.debug) console.log('Mounted')
 		this.isLoading = false
 	},
 

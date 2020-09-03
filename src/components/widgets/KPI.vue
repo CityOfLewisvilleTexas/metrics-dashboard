@@ -21,13 +21,15 @@ import ListOfMetricsButton from '../widgets/ListOfMetricsButton'
 import Vue from 'vue'
 import axios from 'axios'
 export default {
-	name: 'KPI',
+	name: 'KPI',					// USED IN Stats.vue, Default.vue, Donna.vue
 	components: {
 		ListOfMetricsButton
 	},
 	props: ['config','saveSettings'],
 	data () {
 		return {
+			debug: true,
+
 			modalTitle: ''
 		}
 	},
@@ -80,6 +82,7 @@ export default {
 
 	// START
 	mounted() {
+		if(this.debug) console.log('Mounted')
 		this.checkLocalStorage()
 	},
 

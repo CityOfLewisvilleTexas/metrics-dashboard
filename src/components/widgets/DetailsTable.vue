@@ -8,7 +8,7 @@
 import Vue from 'vue'
 import axios from 'axios'
 export default {
-	name: 'DetailsTable',
+	name: 'DetailsTable',					// REPLACED WITH DetailsButton.vue
 	components: {},
 	props: {
 		metric: {

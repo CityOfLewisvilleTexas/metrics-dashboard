@@ -146,7 +146,7 @@
 import Vue from 'vue'
 import ListOfDepartmentsButton from '../widgets/ListOfDepartmentsButton'
 export default {
-	name: 'ListOfMetrics',
+	name: 'ListOfMetrics',					// USED IN Details.vue, Stats.vue, Admin.vue, Default.vue, Donna.vue
 	components: { ListOfDepartmentsButton },
 	props: {
 		config: {

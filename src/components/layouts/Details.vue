@@ -512,21 +512,20 @@ export default {
      		deep: true
 		},
 		'$route' (to, from) {
-			if(this.debug) console.log(this.all)
 			if(to.name == 'Details' || to.name == 'DetailsWithId' || to.name == 'DetailsEdit' || to.name == 'DetailsWithIdEdit'){
-				if(from.name != 'Details' || from.name != 'DetailsWithId' || from.name != 'DetailsEdit' || from.name != 'DetailsWithIdEdit'){
-					if(this.routeDebug) console.log('Route Changed - Enter')
+				if(from.name != 'Details' && from.name != 'DetailsWithId' && from.name != 'DetailsEdit' && from.name != 'DetailsWithIdEdit'){
+					if(this.routeDebug) console.log('Route Changed - Enter: ' + from.name)
 					this.needsInit = true
 					this.needsInit_materialize = true
 					this.init()
 				}
 				else{
-					if((to.name == 'Details' || to.name == 'DetailsWithId') && (from.name != 'DetailsEdit' || from.name != 'DetailsWithIdEdit')){
+					if((to.name == 'Details' || to.name == 'DetailsWithId') && (from.name == 'DetailsEdit' || from.name == 'DetailsWithIdEdit')){
 						if(this.routeDebug) console.log('Route Changed - Update - Change to View')
 						this.needsInit = true
 						this.init()
 					}
-					else if((to.name == 'DetailsEdit' || to.name == 'DetailsWithIdEdit') && (from.name != 'Details' || from.name != 'DetailsWithId')){
+					else if((to.name == 'DetailsEdit' || to.name == 'DetailsWithIdEdit') && (from.name == 'Details' || from.name == 'DetailsWithId')){
 						if(this.routeDebug) console.log('Route Changed - Update - Change to Edit')
 						this.needsInit = true
 						this.init()
@@ -536,6 +535,7 @@ export default {
 						this.resetScroll()
 						this.timestamp = Moment()
 						if(to.params.status && this.showStatusParam != to.params.status) this.showStatusParam = this.statusParam
+						if(this.needsInit_scroll) Vue.nextTick(this.checkMetricsForRouteId)
 					}
 				}
 			}
@@ -566,7 +566,7 @@ export default {
 			handler(newVal, oldVal) {
 				if(this.storeDebug) console.log('isLoading: ' + oldVal  + ' -> ' + newVal)
 				if(!newVal && oldVal){
-					if (this.needsInit_scroll) Vue.nextTick(this.checkMetricsForRouteId)
+					if(this.needsInit_scroll) Vue.nextTick(this.checkMetricsForRouteId)
 				}
 			},
 		},
@@ -611,6 +611,7 @@ export default {
 			$('html, body').scrollTop(0)
 			if(this.idParam) this.needsInit_scroll = true
 			else this.needsInit_scroll = false
+			if(this.debug) console.log('needsInit_scroll: ' + this.needsInit_scroll)
 		},
 		updateFetchParams() {
 			var payload = {
@@ -645,6 +646,7 @@ export default {
 			if (!this.idParam) {
 				return
 			}
+			if(this.debug) console.log('has ID param, needs scroll')
 			var selectedMetric = this.metrics_shown.find(metric => metric[this.primaryKey] == this.idParam)
 			if(selectedMetric) this.scrollToMetric('#metriccard-' + this.idParam)
 			else{

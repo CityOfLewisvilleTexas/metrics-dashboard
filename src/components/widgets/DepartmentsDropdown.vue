@@ -13,7 +13,7 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'DepartmentsDropdown',
+	name: 'DepartmentsDropdown',					// USED IN Stats.vue, Default.vue
 	components: {},
 	props: {
 		config: {
@@ -24,6 +24,7 @@ export default {
 	data () {
 		return {
 			debug: true,
+			
 			needsInit: true,
 			isOpen: false,
 		}

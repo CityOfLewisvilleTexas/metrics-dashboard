@@ -16,7 +16,7 @@ import axios from 'axios'
 import Moment from 'moment'
 import Chart from 'chart.js'
 export default {
-	name: 'DualLineChart2',
+	name: 'DualLineChart2',					// USED IN Default.vue
 	components: {},
 	props: {
 		// compid, title, recordid1, recordid2, min, anim

@@ -25,6 +25,8 @@ export default {
 	props: ['config', 'saveSettings'],
 	data () {
 		return {
+			debug: true,
+
 			chartdata: [],
 			isLoading: true // loading just this history data
 		}
@@ -59,6 +61,7 @@ export default {
 
 	// START
 	mounted() {
+		if(this.debug) console.log('MOUNTED')
 		this.checkLocalStorage()
 		$(window).resize(() => {
 			this.formatDataForChart(this.chartdata, true)

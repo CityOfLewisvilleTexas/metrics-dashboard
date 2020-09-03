@@ -22,6 +22,7 @@ export default {
 	props: ['config'],
 	data () {
 		return {
+			debug: true,
 			isLoading: true
 		}
 	},
@@ -41,6 +42,7 @@ export default {
 
 	// START
 	mounted() {
+		if(this.debug) console.log('Mounted')
 		this.initMap()
 	},
 

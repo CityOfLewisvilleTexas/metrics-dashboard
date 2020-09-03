@@ -101,7 +101,7 @@ import MetricCardValue from '../widgets/MetricCardValue'
 import HistoryButton from '../widgets/HistoryButton'
 import DetailsButton from '../widgets/DetailsButton'
 export default {
-	name: 'MetricCard',
+	name: 'MetricCard',					// USED IN Details.vue
 	components: { MetricCardValue, HistoryButton, DetailsButton },
 	// ONLY USED IN DETAILS COMPONENT - if used in other components, may need to update this component (like metric is stat calc)
 	props: {
@@ -117,8 +117,8 @@ export default {
 	data () {
 		return {
 			debug: false,
-
 			needsInit: true,
+			
 			timestamp: null,
 			//forceUpdater: null,
 		}

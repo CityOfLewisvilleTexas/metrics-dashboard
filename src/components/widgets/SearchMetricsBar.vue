@@ -9,7 +9,7 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'SearchBar',
+	name: 'SearchBar',					// USED IN Details.vue, Stats.vue, Admin.vue, Default.vue, Donna.vue
 	components: {},
 	props: {
 		config: {

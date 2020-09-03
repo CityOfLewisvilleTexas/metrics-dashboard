@@ -20,11 +20,13 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'MetricsByDeptBarChart',
+	name: 'MetricsByDeptBarChart',					// USED IN Admin.vue
 	components: {},
 	props: ['config'],
 	data () {
 		return {
+			debug: true,
+
 			metrictype: ''
 		}
 	},
@@ -84,6 +86,7 @@ export default {
 
 	// START
 	mounted() {
+		if(this.debug) console.log('MOUNTED')
 		this.formatDataForChart()
 		$(window).resize(this.formatDataForChart)
 	},

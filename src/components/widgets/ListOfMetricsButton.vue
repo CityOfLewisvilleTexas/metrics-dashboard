@@ -23,7 +23,9 @@ export default {
 	name: 'ListOfMetricsButton',
 	props: ['compid', 'callback'],
 	data () {
-		return {}
+		return {
+			debug: true,
+		}
 	},
 
 	computed: {
@@ -44,7 +46,9 @@ export default {
 		}
 	},
 
-	mounted() {},
+	mounted() {
+		if(this.debug) console.log('MOUNTED')
+	},
 
 
 	methods: {

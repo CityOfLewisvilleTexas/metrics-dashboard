@@ -469,6 +469,7 @@ export const store = new Vuex.Store({
 	mutations: {
 		// pass in metrics and save them
 		storeMetrics(state, payload) {
+			if(state.debug) console.warn('storeMetrics')
 			state.categories = payload.categories
 			state.metrics = payload.metrics
 			//state.departments = payload.categories.filter(cat => cat.bmptype == 'department')
@@ -485,55 +486,61 @@ export const store = new Vuex.Store({
 				state.fromNow = state.lastRefreshed.fromNow()
 			}, 5000)
 		},
-		storeLandingPageCarousel(state, payload) {
-			state.landingPageCarousel = payload.metrics
-			state.landingPageCarouselSoftReloading = false
-		},
 		storeDetailCarousel(state, payload) {
+			if(state.debug) console.warn('storeDetailCarousel')
 			state.detailCarousel = payload.metrics
 			state.detailCarouselSoftReloading = false
 		},
+		storeLandingPageCarousel(state, payload) {
+			if(state.debug) console.warn('storeLandingPageCarousel')
+			state.landingPageCarousel = payload.metrics
+			state.landingPageCarouselSoftReloading = false
+		},
 		clearMetrics(state) {
+			if(state.debug) console.warn('clearMetrics')
 			if(state.interval) state.interval = clearInterval(state.interval)
 			state.isLoading = true
 			state.softReloading = true
 			state.metrics = []
 		},
 		clearDetailCarousel(state) {
+			if(state.debug) console.warn('clearDetailCarousel')
 			if(state.carouselInterval) state.carouselInterval = clearInterval(state.carouselInterval)
 			state.detailCarouselSoftReloading = true
 			state.detailCarousel = []
 		},
 		clearLandingPageCarousel(state) {
+			if(state.debug) console.warn('clearLandingPageCarousel')
 			state.landingPageCarouselSoftReloading = true
 			state.landingPageCarousel = []
 		},
 		setDomainName(state, payload){
-			if(state.debug) console.log('set domain name ' + payload.domainName)
+			if(state.debug) console.warn('set domain name ' + payload.domainName)
 			state.domainName = payload.domainName
 		},
 		setFetchParams(state, payload) {		// set in Dashboard.vue, every component loads with Dashboard.vue
 			state.fetchParams = Object.assign(state.fetchParams, payload)
 		},
 		setDetailCarouselType(state, payload) {		// set in Dashboard.vue, every component loads with Dashboard.vue
-			if(state.debug) console.log(payload)
+			if(state.debug) console.warn('setDetailCarouselType: ' + payload)
 			state.detailCarouselType = payload
 		},
 		setGoogleChartsLoaded(state, payload) {
-			if(state.debug) console.log('google charts loaded')
+			if(state.debug) console.warn('google charts loaded')
 			state.googleChartsLoaded = true
 		},
 		setSize(state, payload) {
+			if(state.debug) console.warn('setSize: ' + payload.width + ' w ' + payload.height + ' h')
 			state.underLarge = (payload.width < 1200) ? true : false
 			state.width = payload.width
 			state.height = payload.height
 		},
 		login(state, payload){
-			if(state.routeDebug) console.log('login ' + payload.email)
+			if(state.routeDebug) console.error('login ' + payload.email)
 			state.userEmail = payload.email;
 		},
 		logout(state){
-			if(state.routeDebug) console.log('logout')
+			if(state.routeDebug) console.error('logout')
 			state.userEmail = '';
 		},
 
@@ -543,9 +550,9 @@ export const store = new Vuex.Store({
 	// usage: this.$store.dispatch('actionName')
 	actions: {
 		updateFetchParams(context, payload){
-			var hasChange = false, hasChangeC = false
-			var diff = Moment().diff(context.state.lastRefreshed) 
-			if(context.state.debug) console.log(diff)
+			var diff = 0, hasChange = false, hasChangeC = false
+			if(context.state.lastRefreshed) diff = Moment().diff(context.state.lastRefreshed) 
+			//if(context.state.debug) console.log(diff)
 			//if(context.state.debug) console.log(payload)
 
 			// if params have changed (or initial), set store params; clear metrics if not master

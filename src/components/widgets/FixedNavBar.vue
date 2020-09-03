@@ -20,10 +20,12 @@ export default {
 	props: ['compid'],
 	data () {
 		return {
+			debug: true,
 		}
 	},
 
 	mounted() {
+		if(this.debug) console.log('MOUNTED')
 	},
 
 	beforeDestroy() {

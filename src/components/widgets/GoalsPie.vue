@@ -14,11 +14,13 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'GoalsPie',
+	name: 'GoalsPie',					// USED IN Admin.vue (NEEDS CHANGE)
 	components: {},
 	props: ['config'],
 	data () {
 		return {
+			debug: true,
+
 			chartdata: []
 		}
 	},
@@ -46,6 +48,7 @@ export default {
 
 	// START
 	mounted() {
+		if(this.debug) console.log('MOUNTED')
 		this.validateConfig()
 		$(window).resize(this.drawPieChart)
 	},

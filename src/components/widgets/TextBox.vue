@@ -7,7 +7,7 @@
 
 <script>
 export default {
-	name: 'TextBox',
+	name: 'TextBox',					// USED IN Default.vue
 	components: {
 	},
 	props: ['config'],

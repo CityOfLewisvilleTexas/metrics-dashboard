@@ -26,7 +26,7 @@
 import Vue from 'vue'
 import axios from 'axios'
 export default {
-	name: 'DetailsButton',
+	name: 'DetailsButton',					// USED IN MetricCard.vue -> Details.vue
 	components: {},
 	props: {
 		config: {	// timestamp
@@ -40,8 +40,7 @@ export default {
 	},
 	data () {
 		return {
-			debug: true,
-
+			debug: false,
 			isLoading: true, 		// initial load of just this history data,
 			needsMatInit: true,		// materialize init
 			setupWaiting: false,

@@ -21,7 +21,7 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'ListOfDepartmentsButton',
+	name: 'ListOfDepartmentsButton',					// USED IN ListofMetrics.vue (if editable) -> Admin.vue?
 	components: {},
 	props: {
 		config: {

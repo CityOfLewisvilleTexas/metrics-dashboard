@@ -17,13 +17,15 @@ import Moment from 'moment'
 import ListOfMetricsButton from '../widgets/ListOfMetricsButton'
 import Chart from 'chart.js'
 export default {
-	name: 'LineChart2',
+	name: 'LineChart2',					// USED IN Default.vue
 	components: {
 		ListOfMetricsButton
 	},
 	props: ['config', 'saveSettings'],
 	data () {
 		return {
+			debug: true,
+
 			chartdata: [],
 			isLoading: true // loading just this history data
 		}
@@ -53,6 +55,7 @@ export default {
 
 	// START
 	mounted() {
+		if(this.debug) console.log('Mounted')
 		$('.tooltipped').tooltip()
 		this.fetchData()
 	},
