@@ -1,17 +1,26 @@
 <template>
-	<div :id="config.compid" class="card" :class="{ donna: $route.name == 'Donna' }">
-		<div class="title grey lighten-2 grey-text text-darken-1 left-align" :class="{ smaller: isStats || $route.name == 'Donna' }" v-if="!isLoading">
-			{{ metric.realtimeshortname }}
-			<i class="material-icons right tooltipped" :data-tooltip="config.why" data-delay="0" v-if="config.why">help</i>
+	<div :id="compid" class="card" :class="{ 'donna': isDonna }">
+		<div v-if="title"
+			class="title grey lighten-2 grey-text text-darken-1 left-align" :class="{ smaller: (isStats || isDonna) }">
+			{{ title }}
+			<i v-if="hasError && isEditable" class="material-icons red darken-1">error</i>
+			<i v-if="config.why" :data-tooltip="config.why" data-delay="0"
+				class="material-icons right tooltipped">
+				help</i>
 		</div>
-		<div class="background white card pointy">
+
+		<div class="background card" :class="{'grey': hasError, 'lighten-4': hasError, 'white': !hasError, 'pointy': !hasError }">
 			<div class="loader" v-if="isLoading"></div>
-			<ListOfMetricsButton :compid="config.compid + '-metrics-button'" :callback="setMetric" v-else-if="!isLoading && config.editable" />
-			<div v-if="!isLoading" @click="gotoMetric()">
-				<p class="kpi-value center-align text-darken-3" :class="(!isStats) ? (metric.CurrentColor+'-text' || 'grey-text') : 'grey-text'">
-					{{ metric.prevaluetext }}{{ currentValue }}{{ metric.postvaluetext }}
+
+			<ListOfMetricsButton v-if="isEditable && !isLoading"
+				:config="{compid: compid + '-listmetdropdown'}" :callback="setMetric" class="edit-button" />
+			
+			<div v-if="!isLoading && metric" @click="gotoMetric()">
+				<p class="kpi-value center-align text-darken-3" :class="metric.CurrentColor + '-text'">
+					{{ currentValueText }}
 				</p>
 			</div>
+
 		</div>
 	</div>
 </template>
@@ -22,98 +31,244 @@ import Vue from 'vue'
 import axios from 'axios'
 export default {
 	name: 'KPI',					// USED IN Stats.vue, Default.vue, Donna.vue
-	components: {
-		ListOfMetricsButton
+	components: { ListOfMetricsButton },
+	props: {
+		// compid, metricID, editable
+		config: {
+			type: Object,
+			required: true,
+		},
+		saveSettings: {
+			type: Object,
+			required: false,
+			default: null,
+		},
 	},
-	props: ['config','saveSettings'],
 	data () {
 		return {
 			debug: true,
 
-			modalTitle: ''
+			isLoadingSaved: true,
+			savedMetricID: null,
 		}
 	},
 
 	computed: {
-		// copy of store metrics, filtered to Query only
-		metrics() {
-			return this.$store.state.metrics.filter(metric => {
-				return metric.metrictype == 'Query'
-			}).sort((a,b) => {
-				if (a.realtimeshortname < b.realtimeshortname) return -1
-				if (a.realtimeshortname > b.realtimeshortname) return 1
-				return 0
-			})
-		},
+		// route
+		routeName() { return this.$route.name },
 
-		// current metric based on config's psofia record number
-		metric() {
-			if (!this.metrics) return {metricname: ''}
-
-			var _metric = {}
-			for (var i=0; i<this.metrics.length; i++) {
-				if (this.config.recordnumber == this.metrics[i].psofia_recordid) {
-					return this.metrics[i]
-				}
-			}
-			return _metric
-		},
-
-		// grab the value from the metric, formatted correctly as percent or money if necessary
-		currentValue() {
-
-			var decPlaces = this.metric.decimalplaces == null ? 2 : this.metric.decimalplaces
-
-			if (this.metric.gaugedataformat == 'PERCENT') return Number((this.metric.CurrentValue).toFixed(decPlaces))+'%'
-			else if (this.metric.prevaluetext == '$') return (this.metric.CurrentValue).toFixed(2)
-			else return Number(this.metric.CurrentValue.toFixed(decPlaces))
-		},
+		// state
+		storeIsLoading() { return this.$store.state.isLoading },
+		storeIsRefreshing() { return this.$store.state.softReloading },
+		// getters
+		isStats() { return this.$store.getters.isStats },
+		primaryKey() { return this.$store.getters.psofiaVars.primaryKey },
+		currentValue() { if(this.metric) return this.$store.getters.metricValue({metric: this.metric}) },
 
 		// loading icon if store hasnt loaded yet (no current metric loaded)
-		isLoading() {
-			if (!this.metric) return true
-			return this.metric.hasOwnProperty('psofia_recordid') ? false : true
+		isLoading() { return (this.isLoadingSaved || this.storeIsLoading) },
+		isEditable() { return (this.config.hasOwnProperty('editable') && this.config.editable) },
+		
+		isAdmin(){ return (this.routeName == 'Admin') },
+		isDonna(){ return (this.routeName == 'Donna') },
+
+		compid() {
+			if(this.config.hasOwnProperty('compid') && this.config.compid) return this.config.compid
+			else if(this.metricID) return 'kpi-' + this.metricID
+			else if(this.config.hasOwnProperty('metricID') && this.config.metricID) return 'kpi-' + this.config.metricID
+			else return 'kpi'
 		},
 
-		isStats() {
-			return this.$store.state.site == 'stats'
-		}
+		// found from metricID in local storage
+		savedMetric() {
+			if(this.savedMetricID) return this.$store.getters.findMetricByID({ id: this.savedMetricID } )
+			else return null
+		},
+		// found from metricID in config
+		configMetric() {
+			if(this.config.hasOwnProperty('metricID') && this.config.metricID) return this.$store.getters.findMetricByID({ id: this.config.metricID } )
+			else return null
+		},
+
+		metric() {
+			if(!this.isLoading){
+				// use metric from local storage if editing and available
+				if(this.isEditable && this.savedMetricID && this.savedMetric) return this.savedMetric
+				// use metric from config (will be null if id not set or unavailable)
+				else return this.configMetric
+			}
+		},
+		metricID() {
+			if(this.metric) return metric[this.primaryKey]
+			else return null
+		},
+
+		title() {
+			var title = ''
+			if(!this.isLoading){
+				if(this.metric) title = this.metric.realtimeshortname
+				else if(this.hasError && this.errorCode > 1) title = 'Metric Unavailable'
+				else if(this.isEditable) title = 'Metric not set'
+			}
+			return title
+		},
+		currentValueText() {
+			if(this.currentValue){
+				if(this.currentValue.error) return '[[error 1000]]'
+				else return this.currentValue.commaStr
+			}
+		},
+		metricLinks(){
+			if(this.metric) return this.$store.getters.metricLinks(this.metric)
+			else return null
+		},
+
+		// show warning if saved metric is unavailable so config metric is used instead
+		hasSavedWarning() {
+			return (this.isEditable && !this.isLoading && this.metric && this.savedMetricID && !this.savedMetric)
+		},
+		hasError() {
+			return (this.errorCode > 0)
+		},
+
+		errorCode() {
+			var err = 0
+			// both config and local storage are either not set or unavailable
+			if(!this.isLoading && !this.metric){
+				// config metric id not required (blank kpi for user to set), metric id can be saved in local storage
+				if(this.isEditable){
+					//  if config has metric id
+					if(this.config.hasOwnProperty('metricID') && this.config.metricID){
+						// local storage also has metric id => metric from both local storage and config are unavailable
+						if(this.savedMetricID) err = 4
+						else error = 2		// only metric from config is unavailable
+					}
+					// if config does not have metric id
+					else {
+						if(this.savedMetricID) err = 3		// metric from local storage is unavailable
+						// else blank kpi for user to set, no error
+					}
+				}
+				else{
+					if(this.config.hasOwnProperty('metricID') && this.config.metricID) error = 2		// metric from config is unavailable
+					else error = 1			// config missing id
+				}
+			}
+			return err
+		},
+		error() {
+			var err = ''
+			if(this.hasError){
+				if(this.errorCode == 1) err = 'Config: metric ID not provided'
+				else if(this.errorCode == 2) err = 'Config metric not found - ID: ' + this.config.metricID
+				else if(this.errorCode == 3) err = 'Saved metric not found - ID: ' + this.savedMetricID
+				else if(this.errorCode == 4) err = 'Both config & saved metric not found - Config ID: ' + this.config.metricID + '    Saved ID: ' + this.savedMetricID
+			}
+			return err;
+		},
+	},
+
+	watch: {
+		// handle component reused
+		routeName:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('watch: routeName')
+				this.init()
+			},
+		},
+
+		error:{
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(newVal) console.error(this.error)
+			},
+		},
+		hasSavedWarning:{
+			immediate: true,
+			handler(newVal, oldVal){
+				if(newVal) console.warn('Saved metric not found, showing default instead - Saved ID: ' + this.savedMetricID)
+			},
+		},
 	},
 
 	// START
 	mounted() {
 		if(this.debug) console.log('Mounted')
-		this.checkLocalStorage()
+		this.init()
+	},
+	beforeDestroy() {
+		if(this.debug) console.log('Destroy')
 	},
 
 	methods: {
-		// check local storage if necessary -- ugly
-		checkLocalStorage() {
-			if (this.saveSettings) {
-				try {
-					if (localStorage.getItem(this.saveSettings.localStorageKey)) {
-						// if settings for this layout are found in localstorage, set the metric
-						var _root = JSON.parse(localStorage.getItem(this.saveSettings.localStorageKey))
-						if (_root.hasOwnProperty(this.config.compid)) this.config.recordnumber = _root[this.config.compid]
-					}
-				} catch(e) {
-					console.log(e)
-				}
+		init(){
+			if(this.debug) console.log('init')
+			this.isLoadingSaved = true
+			this.savedMetricID = null
+
+			if(this.isEditable && this.saveSettings) this.checkLocalStorage()
+			else{
+				this.savedMetricID = null
+				this.isLoadingSaved = false
 			}
 		},
-		// metric chosen from dropdown
-		setMetric(metric) {
-			this.config.recordnumber = metric.psofia_recordid
 
+		gotoMetric() {
+			if(this.debug) console.log('gotoMetric')
+			if(this.metricLinks.editOnly){
+				if(this.isAdmin || this.isDonna) this.gotoMetricEdit()
+				else console.warn('EDIT ONLY ROUTE')
+			}
+			else{
+				var params = this.metricLinks.viewParams
+				if(this.metricLinks.viewRedirect){
+					var fullViewURL = this.metricLinks.viewURL + '/dashboard/' + params.location + '/details/' + params.dept + '/' + params.id
+					window.open(fullViewURL, '_blank');
+				}
+				else this.$router.push({ name: 'DetailsWithId', params: params })
+			}
+		},
+		gotoMetricEdit() { this.$router.push({ name: 'DetailsWithIdEdit', params: this.metricLinks.editParams }) },
+
+		// metric chosen from ListOfMetricsButton
+		setMetric(metric) {
+			if(this.debug) console.log('setMetric')
+			this.savedMetricID = metric[this.primaryKey]
 			// use saveSettings callback to set localstorage
-			this.saveSettings.callback(this.config.compid, metric.psofia_recordid)
+			this.saveSettings.callback(this.compid, metric[this.primaryKey])
 		},
 
-		// clicked metric, go to details page
-		gotoMetric(metric) {
-			var dept = this.metric.Department.toLowerCase().replace(/ /g, '')
-			this.$router.push({ path: '/dashboard/' + ((this.isStats) ? 'stats' : 'public') + '/details/'+dept+'/'+this.metric.psofia_recordid })//, query: { id: id }})
-		}
+		// check local storage if necessary -- ugly
+		checkLocalStorage() {
+			try {
+				if(localStorage.getItem(this.saveSettings.localStorageKey)) {
+					// if settings for this layout are found in localstorage, set the metric
+					var _root = JSON.parse(localStorage.getItem(this.saveSettings.localStorageKey))
+					if(_root.hasOwnProperty(this.compid)){
+						this.savedMetricID = _root[this.compid]
+						this.isLoadingSaved = false
+					}
+					else{
+						this.savedMetricID = null
+						this.isLoadingSaved = false
+					}
+				}
+				else{
+					this.savedMetricID = null
+					this.isLoadingSaved = false
+				}
+			} catch(e) {
+				console.log(e)
+				this.savedMetricID = null
+				this.isLoadingSaved = false
+			}
+		},
+		clearSavedMetric() {
+			this.savedMetricID = null
+			// use saveSettings callback to set localstorage
+			this.saveSettings.callback(this.compid, null)
+		},
 	}
 }
 </script>
@@ -123,6 +278,7 @@ export default {
 .pointy {
 	cursor: pointer;
 }
+
 .donna .background {
 	padding: 0 24px;
 }
@@ -138,16 +294,14 @@ export default {
 .dark .background {
 	background-color: rgba(0,0,0,0.1)
 }
-.dropdown-button {
+
+.edit-button {
 	position: absolute;
 	top: 0;
 	right: 8px;
 	padding: 0;
 }
-.dropdown-content {
-	overflow-y: scroll !important;
-	overflow-x: auto !important;
-}
+
 .kpi-title {
 	font-size: 20px;
 	margin: 0;
@@ -167,6 +321,7 @@ export default {
 	font-family: 'Product Sans';
 	padding: 4px 16px;
 }
+
 .donna .kpi-value {
 	font-size: 3rem;
 	line-height: 3.5rem;
@@ -177,12 +332,7 @@ export default {
 	margin: 0;
 	font-family: 'Product Sans', 'Roboto';
 }
-.details-btn {
-	border: 3px solid rgba(0,0,0,0.6);
-	padding: 0 16px;
-	border-radius: 100px;
-	line-height: 2rem;
-}
+
 .loader {
 	display: inline-block;
     border: 6px solid #D1C4E9;

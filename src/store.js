@@ -40,11 +40,13 @@ export const store = new Vuex.Store({
 			status: '',
 			type: '',
 			master: '',
+			auth: false,
 		},
 
 		domainName: '',
 		userLoading: false,
 		userEmail: '',
+		authToken: '',
 		//site: '',
 
 		googleChartsLoaded: false,
@@ -123,6 +125,9 @@ export const store = new Vuex.Store({
 			}
 			return psofiaVars
 		},
+		getFormLink: (state, getters) => (payload) => {
+			return getters.psofiaVars.formURL + payload.id
+		},
 // metric props
 		metricPropForCategoryByType: (state, getters) => (type) => {
 			var categoryType = getters.categoryTypes.find(catType => catType.type == type)
@@ -165,7 +170,14 @@ export const store = new Vuex.Store({
 			return getters.routeLocationBySitename(sitename)
 		},
 		checkIfStat: (state, getters) => (metric) => {
-			return getters.metricSitename(metric) == 'stat' ? true : false
+			var sitename = getters.metricSitename(metric)
+			if(sitename) return sitename.toLowerCase() == 'stat' ? true : false
+			else return false
+		},
+		checkIfStatic: (state, getters) => (metric) => {
+			var type = getters.metricType(metric)
+			if(type) return type.toLowerCase() == 'static' ? true : false
+			else return false
 		},
 		findMetricByID: (state, getters) => (payload) => {
 			var primaryKey = getters.psofiaVars.primaryKey
@@ -201,7 +213,7 @@ export const store = new Vuex.Store({
 			return statuses
 		},
 		routeLocationByLocationParam: (state, getters) => (locationParam) => { return getters.routeLocations.find(routeLocation => routeLocation.locationParam == locationParam) },
-		routeLocationBySitename: (state, getters) => (sitename) => { return getters.routeLocations.find(routeLocation => routeLocation.sitename == sitename) },
+		routeLocationBySitename: (state, getters) => (sitename) => { return getters.routeLocations.find(routeLocation => routeLocation.locationParam != 'internalonly' && routeLocation.sitename == sitename) },
 		fullCategoryByDeptParam: (state, getters) => (deptParam) => {
 			if(getters.isLoading_categories) return { id: 'loading', display: 'Loading', deptParam: deptParam }
 			return getters.routeDepts.find(category => category.deptParam == deptParam)
@@ -519,7 +531,9 @@ export const store = new Vuex.Store({
 			state.domainName = payload.domainName
 		},
 		setFetchParams(state, payload) {		// set in Dashboard.vue, every component loads with Dashboard.vue
-			state.fetchParams = Object.assign(state.fetchParams, payload)
+			var newParams = payload.params
+			if(!(newParams.hasOwnProperty('auth'))) newParams = Object.assign(newParams, {auth: false})
+			state.fetchParams = Object.assign(state.fetchParams, newParams)
 		},
 		setDetailCarouselType(state, payload) {		// set in Dashboard.vue, every component loads with Dashboard.vue
 			if(state.debug) console.warn('setDetailCarouselType: ' + payload)
@@ -536,12 +550,14 @@ export const store = new Vuex.Store({
 			state.height = payload.height
 		},
 		login(state, payload){
-			if(state.routeDebug) console.error('login ' + payload.email)
+			if(state.routeDebug) console.error('login ' + payload.email + ' - ' + payload.authToken)
 			state.userEmail = payload.email;
+			state.authToken = payload.authToken;
 		},
 		logout(state){
 			if(state.routeDebug) console.error('logout')
 			state.userEmail = '';
+			state.authToken = '';
 		},
 
 	},
@@ -556,13 +572,13 @@ export const store = new Vuex.Store({
 			//if(context.state.debug) console.log(payload)
 
 			// if params have changed (or initial), set store params; clear metrics if not master
-			if( payload.hasOwnProperty('params') && (context.state.fetchParams.sitename != payload.params.sitename || context.state.fetchParams.status != payload.params.status || context.state.fetchParams.type != payload.params.type || context.state.fetchParams.master != payload.params.master) ){			
+			if( payload.hasOwnProperty('params') && (context.state.fetchParams.sitename != payload.params.sitename || context.state.fetchParams.status != payload.params.status || context.state.fetchParams.type != payload.params.type || context.state.fetchParams.master != payload.params.master || context.state.fetchParams.auth != payload.params.auth) ){			
 				// master 'all' unchanged only updates fetch params, return from ws is the same so no need to clear & call again immediately
-				if(context.state.fetchParams.master == 'all' && payload.params.master == 'all'){
-					context.commit('setFetchParams', payload.params)
+				if(context.state.fetchParams.master == 'all' && payload.params.master == 'all' && context.state.fetchParams.auth == true && payload.params.auth == true){
+					context.commit('setFetchParams', payload)
 				}
 				else{
-					context.commit('setFetchParams', payload.params)
+					context.commit('setFetchParams', payload)
 					if(context.state.metrics.length != 0) context.commit('clearMetrics')
 					hasChange = true
 				}
@@ -588,20 +604,62 @@ export const store = new Vuex.Store({
 			function get(context) {
 				if(context.state.debug) console.log('fetchPerfMeasures')
 				context.state.softReloading = true
-				// webservice should be reordered so master = 'all' check comes before sitename check
-				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Master', {
-					sitename: context.state.fetchParams.master == 'all' ? '' : context.state.fetchParams.sitename,
-					status: context.state.fetchParams.status,
-					type: context.state.fetchParams.type,
-					master: context.state.fetchParams.master
-				})
-				.then(results => {
-					context.commit('storeMetrics', results.data)
-					//if(context.state.debug) console.log('> metrics retrieved', results.data.metrics)
-				})
-				.catch(error => {
-					console.error(error)
-				})
+
+				if(context.state.fetchParams.auth){
+					if(context.state.authToken){
+						axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Auth', {
+							sitename: context.state.fetchParams.sitename,
+							status: context.state.fetchParams.status,
+							type: context.state.fetchParams.type,
+							master: context.state.fetchParams.master,
+							auth_token: context.state.authToken
+						})
+						.then(results => {
+							context.commit('storeMetrics', results.data)
+							//if(context.state.debug) console.log('> metrics retrieved', results.data.metrics)
+						})
+						.catch(error => {
+							console.error(error)
+							// try again if no current data
+							if(context.state.metrics.length == 0){
+								context.state.interval = setInterval(() => {
+									context.dispatch('fetchPerfMeasures')
+								}, 2000)
+							}
+						})
+					}
+					else{
+						console.error('NO AUTH TOKEN')
+						// try again if no current data
+						if(context.state.metrics.length == 0){
+							context.state.interval = setInterval(() => {
+								context.dispatch('fetchPerfMeasures')
+							}, 2000)
+						}
+					}
+				}
+				// public, no authentication
+				else{
+					// webservice should be reordered so master = 'all' check comes before sitename check
+					axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Public', {
+						sitename: context.state.fetchParams.sitename,
+						type: context.state.fetchParams.type,
+						master: context.state.fetchParams.master
+					})
+					.then(results => {
+						context.commit('storeMetrics', results.data)
+						//if(context.state.debug) console.log('> metrics retrieved', results.data.metrics)
+					})
+					.catch(error => {
+						console.error(error)
+						// try again if no current data
+						if(context.state.metrics.length == 0){
+							context.state.interval = setInterval(() => {
+								context.dispatch('fetchPerfMeasures')
+							}, 2000)
+						}
+					})
+				}
 			}
 
 			if (context.state.interval) context.state.interval = clearInterval(context.state.interval) // only keep one timer
@@ -621,10 +679,9 @@ export const store = new Vuex.Store({
 			function get(context) {
 				if(context.state.debug) console.log('fetchStatsCarousel')
 				context.state.detailCarouselSoftReloading = true
-				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Master', {
+				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Public', {
 					sitename: 'stat',
-					status: 'deployed',
-					type: 'Query',
+					type: '',
 					master: 'detailCarousel'
 				})
 				.then(results => {
@@ -632,6 +689,12 @@ export const store = new Vuex.Store({
 				})
 				.catch(error => {
 					console.error(error)
+					// try again if no current data
+					if(context.state.detailCarousel.length == 0){
+						context.state.carouselInterval = setInterval(() => {
+							context.dispatch('fetchStatsCarousel')
+						}, 2000)
+					}
 				})
 			}
 
@@ -647,10 +710,9 @@ export const store = new Vuex.Store({
 			function get(context) {
 				if(context.state.debug) console.log('fetchMetricsCarousel')
 				context.state.detailCarouselSoftReloading = true
-				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Master', {
+				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Public', {
 					sitename: 'metricPublic',
-					status: 'deployed',
-					type: 'Query',
+					type: '',
 					master: 'detailCarousel'
 				})
 				.then(results => {
@@ -658,6 +720,12 @@ export const store = new Vuex.Store({
 				})
 				.catch(error => {
 					console.error(error)
+					// try again if no current data
+					if(context.state.detailCarousel.length == 0){
+						context.state.carouselInterval = setInterval(() => {
+							context.dispatch('fetchMetricsCarousel')
+						}, 2000)
+					}
 				})
 			}
 
@@ -673,10 +741,9 @@ export const store = new Vuex.Store({
 			function get(context) {
 				if(context.state.debug) console.log('fetchLandingPageCarousel')
 				context.state.landingPageCarouselSoftReloading = true
-				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Master', {
+				axios.post('https://query.cityoflewisville.com/v2/?webservice=Performance Measures/Get Metrics Public', {
 					sitename: '',
-					status: 'deployed',
-					type: 'Query',
+					type: '',
 					master: 'landingCarousel'
 				})
 				.then(results => {
@@ -685,6 +752,12 @@ export const store = new Vuex.Store({
 				})
 				.catch(error => {
 					console.error(error)
+					// try again if no current data
+					if(context.state.landingPageCarousel.length == 0){
+						context.state.carouselInterval = setInterval(() => {
+							context.dispatch('fetchLandingPageCarousel')
+						}, 2000)
+					}
 				})
 			}
 

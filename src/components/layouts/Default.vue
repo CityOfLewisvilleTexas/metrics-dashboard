@@ -2,109 +2,114 @@
 	<div>
 		<header>
 			<div class="navbar-fixed">
-	            <nav>
+				<nav>
 					<div id="top-nav" class="nav-wrapper col-purple left-align">
-					    <div class="logo"></div>
-					    <div class="brand-logo white-text text-darken-3" :class="{ shrink : underLarge }">City of Lewisville</div>
-					    <ul class="right">
-					    	<li v-if="!underLarge">
-					    		<SearchMetricsBar :config="navsearchconfig" />
-					    	</li>
-					    	<li>
-					    		<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
-					    			<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
-					    		</a>
-					    	</li>
-					    </ul>
+						<div class="logo"></div>
+						<div class="city-brand white-text text-darken-3">City of Lewisville</div>
+						<ul class="right">
+							<li v-if="!underLarge">
+								<SearchMetricsBar :config="navsearchconfig" />
+							</li>
+							<li>
+								<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
+									<i class="material-icons" :class="{ active : isRefreshing }">refresh</i>
+								</a>
+							</li>
+						</ul>
 					</div>
 				</nav>
 			</div>
 		</header>
+
 		<main>
-			<div class="container">
-				<div class="spinner" v-if="isLoading">
-					<div class="double-bounce1"></div>
-					<div class="double-bounce2"></div>
-				</div>
-				<transition appear name="fade">
-					<div v-if="!isLoading" class="main">
-						<div class="row">
-							<div class="col s12">
-								<SearchMetricsBar :config="searchconfig" v-if="underLarge" />
-							</div>
-							<div class="col s12 l8 xl4 refresh-text left-align valign-wrapper">
-								<div id="updating-loader" class="small spinner" v-if="isRefreshing">
-									<div class="double-bounce1"></div>
-									<div class="double-bounce2"></div>
-								</div>
-								<div class="updating" :class="{ 'nudge-right': underLarge }" v-if="isRefreshing || isLoading">
-									Updating...
-								</div>
-								<div :class="{ 'nudge-right': underLarge }" v-else>
-									Updated {{ refreshedAt }}.
-								</div>
-							</div>
-							<div class="s12">
-							</div>
+
+			<div v-if="isLoading" class="spinner">
+				<div class="double-bounce1"></div>
+				<div class="double-bounce2"></div>
+			</div>
+
+			<transition appear name="fade">
+				<div v-if="!isLoading" class="main">
+
+					<div class="row lowmarg">
+						<div class="col s12">
+							<SearchMetricsBar v-if="underLarge" :config="searchconfig" />
 						</div>
-						<div class="row nomarg">
-							<div class="col s12 m8 l4 left-align">
-								<DepartmentsDropdown />
+						<div class="col s12 refresh-text left-align valign-wrapper">
+							<div v-if="isRefreshing" id="updating-loader" class="small spinner">
+								<div class="double-bounce1"></div>
+								<div class="double-bounce2"></div>
 							</div>
-						</div>
-						<div class="row nomarg">
-							<div class="col s12 xl2 grid left-align" id="g0">
-								<GoalsPie2 :config="config0" />
+							<div v-if="isRefreshing" class="updating nudge-right">
+								Updating...
 							</div>
-							<div class="col s12 xl6 grid left-align" id="g1">
-								<DualHistoryGraph2 :config="config1" :saveSettings="saveSettings" />
-							</div>
-							<div class="col s12 xl4 grid" id="g8">
-								<ESRIMap :config="config9" />
-							</div>
-						</div>
-						<div class="row nomarg" shortcut>
-							<div class="col s12 xl3 grid" id="g9">
-								<GoogleMap :config="config10" />
-							</div>
-							<div class="col s12 l8 xl6 grid left-align" id="g2">
-								<HistoryGraph2 :config="config2" :saveSettings="saveSettings" />
-							</div>
-							<div class="col s12 l4 xl3 grid left-align" id="g10">
-								<TextBox :config="config11" />
-							</div>
-						</div>
-						<div class="row nomarg" shortcut>
-							<div class="col s12 l6 xl4 nopad">
-								<div class="col s12 m6 l12 grid" id="g3">
-									<KPI :config="config3" :saveSettings="saveSettings" />
-								</div>
-								<div class="col s12 m6 l12 grid" id="g4">
-									<KPI :config="config4" :saveSettings="saveSettings" />
-								</div>
-								<div class="col s12 m6 l12 grid" id="g5">
-									<KPI :config="config5" :saveSettings="saveSettings" />
-								</div>
-								<div class="col s12 m6 l12 grid" id="g6">
-									<KPI :config="config6" :saveSettings="saveSettings" />
-								</div>
-								<div class="col s12 m6 l12 grid" id="g12">
-									<KPI :config="config12" :saveSettings="saveSettings" />
-								</div>
-							</div>
-							<div class="col s12 l6 xl8 grid" id="g7">
-								<ListOfMetrics :config="config7" :saveSettings="saveSettings" />
+							<div v-if="!isRefreshing" class="nudge-right">
+								Updated {{ refreshedAt }}.
 							</div>
 						</div>
 					</div>
-				</transition>
-			</div>
+
+					<div class="row lowmarg">
+						<div class="col s12 m8 l4 left-align">
+							<DepartmentsDropdown />
+						</div>
+					</div>
+
+					<div class="row lowmarg">
+						<div class="col s12 xl2 grid left-align" id="g0">
+							<GoalsPie2 :config="config0" />
+						</div>
+						<div class="col s12 xl6 grid left-align" id="g1">
+							<DualHistoryGraph2 :config="config1" :saveSettings="saveSettings" />
+						</div>
+						<div class="col s12 xl4 grid" id="g8">
+							<ESRIMap :config="config9" />
+						</div>
+					</div>
+
+					<div class="row lowmarg" shortcut>
+						<div class="col s12 xl3 grid" id="g9">
+							<GoogleMap :config="config10" />
+						</div>
+						<div class="col s12 l8 xl6 grid left-align" id="g2">
+							<HistoryGraph2 :config="config2" :saveSettings="saveSettings" />
+						</div>
+						<div class="col s12 l4 xl3 grid left-align" id="g10">
+							<TextBox :config="config11" />
+						</div>
+					</div>
+
+					<div class="row lowmarg" shortcut>
+						<div class="col s12 l6 xl4 nopad">
+							<div class="col s12 m6 l12 grid" id="g3">
+								<KPI :config="config3" :saveSettings="saveSettings" />
+							</div>
+							<div class="col s12 m6 l12 grid" id="g4">
+								<KPI :config="config4" :saveSettings="saveSettings" />
+							</div>
+							<div class="col s12 m6 l12 grid" id="g5">
+								<KPI :config="config5" :saveSettings="saveSettings" />
+							</div>
+							<div class="col s12 m6 l12 grid" id="g6">
+								<KPI :config="config6" :saveSettings="saveSettings" />
+							</div>
+							<div class="col s12 m6 l12 grid" id="g12">
+								<KPI :config="config12" :saveSettings="saveSettings" />
+							</div>
+						</div>
+						<div class="col s12 l6 xl8 grid" id="g7">
+							<ListOfMetrics :config="config7" :saveSettings="saveSettings" />
+						</div>
+					</div>
+
+				</div>
+			</transition>
+
 		</main>
 	</div>
 </template>
 
 <script>
-import Moment from 'moment'
 import GoalsPie2 from '../widgets/GoalsPie2'
 import HistoryGraph2 from '../widgets/HistoryGraph2'
 import DualHistoryGraph2 from '../widgets/DualHistoryGraph2'
@@ -117,9 +122,7 @@ import TextBox from '../widgets/TextBox'
 import DepartmentsDropdown from '../widgets/DepartmentsDropdown'
 export default {
 	name: 'Default',
-	components: {
-		GoalsPie2, HistoryGraph2, DualHistoryGraph2, ListOfMetrics, KPI, SearchMetricsBar, ESRIMap, GoogleMap, TextBox, DepartmentsDropdown
-	},
+	components: { GoalsPie2, HistoryGraph2, DualHistoryGraph2, ListOfMetrics, KPI, SearchMetricsBar, ESRIMap, GoogleMap, TextBox, DepartmentsDropdown },
 	props: [],
 	beforeRouteUpdate (to, from, next) {
 		if(this.debug) console.log('Default - beforeRouteUpdate')
@@ -129,11 +132,14 @@ export default {
 	data () {
 		return {
 			debug: true,
+			needsInit: true,
+			needsInit_materialize: true,
 			params: {
 				sitename: 'metricPublic',
 				status: 'deployed',
 				type: '',
-				master: ''
+				master: '',
+				auth: false,
 			},
 
 			id: 'l3',
@@ -151,8 +157,8 @@ export default {
 			config1: {
 				compid: 'g1-graph',
 				title: 'PD/FD Response Time to Priority 1 Calls',
-				recordid1: '87DFF30F66B5419C96B4D760DD0E2952',
-				recordid2: '30C81A8705FF48CDAA0AE5FB558041D1',
+				metricID_1: '87DFF30F66B5419C96B4D760DD0E2952',
+				metricID_2: '30C81A8705FF48CDAA0AE5FB558041D1',
 				label1: 'PD Response Time (min)',
 				label2: 'FD Response Time (min)',
 				min: 0,
@@ -161,7 +167,8 @@ export default {
 			config2: {
 				compid: 'g2-graph',
 				title: null,
-				recordid: '31B30EEF5DF9476CBD0D01394E884A08',
+				metricID: '31B30EEF5DF9476CBD0D01394E884A08',
+				//metricID: '07A3596CDC8746F48DE5B3CB54514C76',
 				goal: 14,
 				editable: false,
 				min: 5,
@@ -170,27 +177,27 @@ export default {
 			},
 			config3: {
 				compid: 'g3-kpi',
-				recordnumber: '9B640C1A39444E71B067B716F47E2F84', 
+				metricID: '9B640C1A39444E71B067B716F47E2F84', 
 				editable: false
 			},
 			config4: {
 				compid: 'g4-kpi',
-				recordnumber: 'ACE5BF5D40234EEDB70E02435802D231',
+				metricID: 'ACE5BF5D40234EEDB70E02435802D231',
 				editable: false
 			},
 			config5: {
 				compid: 'g5-kpi',
-				recordnumber: '87DFF30F66B5419C96B4D760DD0E2952',
+				metricID: '87DFF30F66B5419C96B4D760DD0E2952',
 				editable: false
 			},
 			config6: {
 				compid: 'g6-kpi',
-				recordnumber: '30C81A8705FF48CDAA0AE5FB558041D1',
+				metricID: '30C81A8705FF48CDAA0AE5FB558041D1',
 				editable: false
 			},
 			config12: {
 				compid: 'g12-kpi',
-				recordnumber: '1FFCBA0879E54C33ADD83FC736E68A73',
+				metricID: '1FFCBA0879E54C33ADD83FC736E68A73',
 				editable: false
 			},
 			config7: {
@@ -225,11 +232,14 @@ export default {
 	},
 
 	computed: {
+		// store.state
 		isLoading() { return this.$store.state.isLoading },
 		isRefreshing() { return this.$store.state.softReloading },
 		refreshedAt() { return this.$store.state.fromNow },
 		underLarge() { return this.$store.state.underLarge },
+		// store.getters
 		isStats() { return this.$store.getters.isStats },
+
 		// debug only
 		categoriesLoading(){ return this.$store.getters.isLoading_categories },
 	},
@@ -257,13 +267,23 @@ export default {
 
 	mounted() {
 		if(this.debug) console.log('Mounted')
-		this.updateFetchParams()
+		this.init()
 	},
 	beforeDestroy() {
 		if(this.debug) console.log('Destroy')
+		$('.tooltipped').tooltip('remove');
 	},
 
 	methods: {
+		init(){
+			if(this.needsInit_materialize) this.initMaterialize()
+			this.updateFetchParams()
+			this.needsInit = false
+		},
+		initMaterialize(){
+			$('.tooltipped').tooltip({delay: 0, position: 'left'});
+			this.needsInit_materialize = false
+		},
 		updateFetchParams() {
 			var payload = { params: this.params }
 			if(this.debug) console.log('Update fetch params')
@@ -276,11 +296,17 @@ export default {
 		},
 
 		// used for backing up the layout -- ugly / hard to follow
+			// added null handling to clear object property (for when metric id no longer exists)
 		saveLayout(key, value) {
 			try {
 				var _config = {}
 				if (localStorage.getItem('l3')) _config = JSON.parse(localStorage.getItem('l3'))
-				_config[key] = value
+				if(value){
+					_config[key] = value
+				}
+				else{
+					if(_config.hasOwnProperty(key)) delete _config[key]
+				}
 				localStorage.setItem('l3', JSON.stringify(_config))
 				Materialize.toast('Saved!', 2000)
 			} catch(e) {
@@ -296,51 +322,64 @@ export default {
 </script>
 
 <style scoped>
-.container{
-	width: 100%;
-    max-width:initial;
-    > .row{
-        margin: 0;
-        > .col{
-            padding: 0;
-        }
-    }
+
+/* colors */
+.col-purple {
+    background-color: #5A348D !important;
 }
-.grid {
-	padding: 12px;
+.col-purple-text {
+    color: #5A348D !important;
 }
-.nomarg {
-	margin: 0;
-	padding: 0 8px;
-}
-.nopad {
-	padding: 0;
-}
-.refresh-text {
-	margin-top: 16px;
+
+/* navbar */
+.nav-wrapper {
+	padding-left: .75rem;
+	padding-right: .75rem;	
 }
 .logo {
-	width: 36px;
+    position: absolute;
     display: inline-block;
-    height: 34px;
+	width: 36px;
+    height: 100%;
     vertical-align: middle;
     background-image: url(../../../static/pmartin.svg);
     background-repeat: no-repeat;
     background-size: contain;
     background-position: center;
     opacity: 1;
-    margin: 0 16px;
 }
-.brand-logo.shrink {
-	font-size: 1.5rem;
+.city-brand {
+	position: absolute;
+	display: inline-block;
+    font-size: 1.5rem;
+    margin-left: calc(36px + .75rem);
 }
-nav i.material-icons.active {
-	animation: spin 2s linear infinite;
+
+.grid {
+	padding: 8px;
 }
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.lowmarg {
+	margin: 0 0 0.5rem 0;
+	padding: 0 8px;
 }
+.nopad {
+	padding: 0;
+}
+
+.refresh-text {
+	margin-top: 0.5rem;
+}
+.nudge-right {
+	padding-left: 8px;
+}
+
+@media only screen and (max-width : 992px) {
+	.refresh-text {
+		margin-top: 0;
+	}
+}
+
+/* LOADERS */
 
 .updating {
 	display: block;
@@ -349,11 +388,6 @@ nav i.material-icons.active {
 #updating-loader {
 	position: absolute;
 }
-
-.nudge-right {
-	margin-left: 8px;
-}
-
 .small.spinner {
 	width: 30px;
 	height: 30px;
@@ -366,6 +400,17 @@ nav i.material-icons.active {
   height: 60px;
   position: relative;
   margin: 100px auto;
+}
+
+
+/* ANIMATIONS */
+
+nav i.material-icons.active {
+	animation: spin 2s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 .double-bounce1, .double-bounce2 {
   width: 100%;
@@ -395,6 +440,10 @@ nav i.material-icons.active {
     -webkit-transform: scale(1.0);
   }
 }
+
+
+/* TRANSITIONS */
+
 .slideup-transition {
 	transition: transform 5s ease-in-out;
 }
@@ -409,6 +458,9 @@ nav i.material-icons.active {
   transform: translate3d(0, 100px,0);
 }
 
+
+/* WIDGETS */
+
 .embed-container {
 	position: relative;
 	padding-bottom: 80%;
@@ -421,12 +473,6 @@ nav i.material-icons.active {
 	left: 0;
 	width: 100%;
 	height: 370px;
-}
-small {
-	position: absolute;
-	z-index: 40;
-	bottom: 0;
-	margin-bottom: -15px;
 }
 .maps {
 	height: 370px
@@ -450,7 +496,4 @@ small {
 	height: 410px;
 }
 
-.col-purple {
-    background-color: #5A348D !important;
-}
 </style>

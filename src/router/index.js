@@ -211,22 +211,22 @@ router.beforeEach((to, from, next) => {
   }
 
   // save useremail if in storage and not already in store
-  if(!store.state.userEmail && sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail){
-    store.commit('login', { email: localStorage.colEmail })
+  if((!store.state.userEmail || !store.state.authToken) && sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail){
+    store.commit('login', { email: localStorage.colEmail, authToken: localStorage.authToken })
   }
   next()
 })
 
 
 function checkAuth (to, from, next){
-  if(store.state.userEmail){
+  if(store.state.userEmail && store.state.authToken){
     next()
   }
   else{
     // if already authenticated && has token & email, store user, allow
     if(store.state.securityDebug || (sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail)){
-      if(store.state.securityDebug) store.commit('login', { email: 'clarson@cityoflewisville.com' })
-      else store.commit('login', { email: localStorage.colEmail })
+      if(store.state.securityDebug) store.commit('login', { email: 'clarson@cityoflewisville.com', authToken: '13107057BB20449E84CC02866214DF3676E8E98E9B2C40248AB3EB5AB7A3B076498726B308EB4A51B24B9E555EC38EF4' })
+      else store.commit('login', { email: localStorage.colEmail, authToken: localStorage.authToken })
       next()
     }
     // else push to login page, immediately require login, then return or redirect

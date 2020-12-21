@@ -1,24 +1,30 @@
 <template>
 	<div :id="getCompID('historybutton-outer')" class="outer">
+
 		<a v-if="isQuery" :id="getCompID('historybutton')" :data-target="modalID"
 			:disabled="!metricUSP && !debug"
 			class="btn btn-flat history-btn white grey-text text-darken-2 waves-effect waves-dark modal-trigger">
 			history
 		</a>
 
-		<div :id="modalID" class="modal white">
+		<div :id="modalID" class="modal"
+			:class="{'grey': hasError, 'lighten-4': hasError, 'white': !hasError}">
 			<div class="modal-content">
-				<p class="flow-text">{{ metric.metricname }}</p>
-				<p v-show="hasError" class="flow-text">ERROR: no USP set for metric</p>
+				<p class="flow-text">{{ title }}</p>
+
 				<div v-if="isLoading" class="loader"></div>
-				<div v-show="!isLoading && !hasError" class="history-graph-holder">
-					<canvas :id="canvasID" class="cvs" />
+
+				<p v-show="hasError" class="flow-text">ERROR: no USP set for metric</p>
+
+				<div v-show="!isLoading && !hasError" class="history-chart">
+					<canvas :id="chartID" class="cvs chart-holder" />
 				</div>
 			</div>
 			<div class="modal-footer">
 				<a class="modal-action modal-close waves-effect waves-dark btn-flat">Done</a>
 			</div>
 		</div>
+
 	</div>
 </template>
 
@@ -43,14 +49,17 @@ export default {
 	data () {
 		return {
 			debug: false,
-			isLoading: true, 		// initial load of just this history data
 			needsMatInit: true,		// materialize init
+
 			needsDraw: true,
+			needsRedraw: false,				// component is being reused, hide/clear chart until fully reset
 			isDrawing: false,
-			needsRefresh: false,	// only refresh history data as often as metrics refreshes (when open, will keep same data if reopened before refreshed)
+			
+			needsFetch: false,				// only refresh history data as often as metrics refreshes (when open, will keep same data if reopened before refreshed)
+			metricdata: [],
 
 			historyChart: null,
-			metricdata: [],
+			chartdata: [],
 			calcMin: 0,
 			calcMax: 0,
 
@@ -94,12 +103,12 @@ export default {
 	},
 
 	watch: {
-		// set needsRefresh on metrics refresh
+		// set needsFetch on metrics refresh
 		storeIsRefreshing:{
 			immediate: false,
 			handler(newVal, oldVal) {
 				if(!newVal && oldVal){
-					this.needsRefresh = true
+					this.needsFetch = true
 					if(this.isOpen) this.fetchData()
 				}
 			},
@@ -151,7 +160,7 @@ export default {
 			this.destroyChart()
 
 			this.needsDraw = true
-			this.needsRefresh = false
+			this.needsFetch = false
 			this.metricdata = []
 			this.calcmin = 0
 			this.calcmax = 0
@@ -196,7 +205,7 @@ export default {
 					if(this.needsDraw){
 						this.fetchTimeout = setTimeout(this.fetchData, 2000);
 					}
-					// else, still needsRefresh, but try again on next open/metrics refresh
+					// else, still needsFetch, but try again on next open/metrics refresh
 					else{
 						this.isDrawing = false
 					}
@@ -278,7 +287,7 @@ export default {
 							this.calcmax = newmax
 						}
 						this.historyChart.update({ duration: 0 })
-						this.needsRefresh = false
+						this.needsFetch = false
 						this.isDrawing = false
 					}
 				}
@@ -301,7 +310,7 @@ export default {
 		onModalOpen() {
 			if(this.debug) console.log('open modal')
 			this.isOpen = true
-			if(this.needsDraw || this.needsRefresh) this.fetchData()
+			if(this.needsDraw || this.needsFetch) this.fetchData()
 		},
 		onModalClose() {
 			if(this.debug) console.log('close modal')

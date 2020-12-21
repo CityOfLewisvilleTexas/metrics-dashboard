@@ -1,5 +1,5 @@
 <template>
-	<div :id="compid" class="card" :class="{ donna: $route.name == 'Donna', 'lp-carousel': $route.name == 'Carousel' }">
+	<div :id="compid" class="card" :class="{ 'donna': routeName == 'Donna', 'low-padding': (isLandingPageCarousel || isDetailCarousel) }">
 		<div class="title col-purple white-text left-align">
 			{{ title }}
 			<small v-if="countFilteredMetrics > 0" class="white-text">( {{ countFilteredMetrics }} )</small>
@@ -65,13 +65,13 @@
 					</li>
 				</ul>
 			</div>
-			<ListOfDepartmentsButton v-if="config.editable && !this.departmentsLoading"
-				:config="{compid: compid+'-deptdropdown'}" :filteredDepartments="filteredDepartments" :callback="setDepartment" class="edit-button" />
 			<div class="loader" v-if="isLoading"></div>
+			<ListOfDepartmentsButton v-if="isEditable && !departmentsLoading"
+				:config="{compid: compid+'-deptdropdown'}" :filteredDepartments="filteredDepartments" :callback="setDepartment" class="edit-button" />
 			<table v-if="!isLoading" class="highlight bordered">
 				<thead>
 					<tr>
-						<th class="grey-text">Metric</th>
+						<th class="col-purple-text">Metric</th>
 						<th v-if="showDeptCol" class="col-purple-text hide-on-small-only">Dept</th>
 						<th v-if="isCombo" class="col-purple-text hide-on-small-only">Type</th>
 						<th v-if="!onlyStats" class="col-purple-text">Goal</th>
@@ -87,22 +87,28 @@
 					<tr v-for="metric in splitMetrics[page-1]">
 						<td @click="gotoMetric(metric)" class="grey-text text-darken-2">{{ metric.realtimeshortname }}</td>
 						<td v-if="showDeptCol" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only">{{ metric.Department }}</td>
+
 						<td v-if="isCombo" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only">{{ getTypeOfText(metric) }}</td>
+						<!--<td v-if="!onlyQuery" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only"><small>{{ checkIfStatic(metric) ? 'static' : '' }}</small></td>-->
+
 						<td v-if="!onlyStats" @click="gotoMetric(metric)" class="grey-text text-darken-2">
 							{{ !(checkIfStat(metric)) ? metric.metricgoal : '' }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value" :class="getTextColor(metric)">
+
+						<td @click="gotoMetric(metric)" class="center-align value" :class="getTextColor(metric, 'current')">
 							{{ metricValue(metric, 'current') }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-med-and-down" :class="getTextColor(metric)">
+						<td @click="gotoMetric(metric)" class="center-align value hide-on-med-and-down" :class="getTextColor(metric, 'weekly')">
 							{{ metricValue(metric, 'weekly') }}
 						</td>
-						<td @click="gotoMetric(metric)" class="center-align text-darken-1 value hide-on-small-only" :class="getTextColor(metric)">
+						<td @click="gotoMetric(metric)" class="center-align value hide-on-small-only" :class="getTextColor(metric, 'monthly')">
 							{{ metricValue(metric, 'monthly') }}
 						</td>
+
 						<td v-if="isAdmin" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only">{{ getLocationText(metric) }}</td>
 						<td v-if="isAdmin" @click="gotoMetric(metric)" class="grey-text text-darken-2 hide-on-small-only">{{ getStatusText(metric) }}</td>
-						<td v-if="isAdmin" class="center-align grey-text text-darken-2">
+
+						<td v-if="isEditable" class="center-align grey-text text-darken-2">
 							<a @click="gotoMetricForm(metric)" class="btn-flat grey lighten-2">
 								<i class="material-icons">edit</i>
 							</a>
@@ -167,29 +173,20 @@ export default {
 	},
 	data () {
 		return {
-			debug: true,
+			debug: false,
 			needsInit: true,
-			needsInit_materialize: true,
+			needsMatInit: true,
 			needsInit_timer: true,
 
 			department: null,
-			isLoadingDept: true,
+			isLoadingSaved: true,
 			sorter: {
 				by: 'realtimeshortname',
 				order: 1,
 			},
-			filter1: {
-				attr: '',
-				value: ''
-			},
-			filter2: {
-				attr: '',
-				value: ''
-			},
-			filter3: {
-				attr: '',
-				value: ''
-			},
+			filter1: { attr: '', value: '' },
+			filter2: { attr: '', value: '' },
+			filter3: { attr: '', value: '' },	// unused
 			page: 1,
 			timer: null,
 			autoplay: true,
@@ -198,38 +195,49 @@ export default {
 	},
 
 	computed: {
-		routeName(){ return this.$route.name },
-		locationParam() { return this.$route.params.location },
-		deptParam() { return this.$route.params.location },
+			// route
+			routeName() { return this.$route.name },
+			routeParams() { return this.$route.params },
+			locationParam() { return this.routeParams.location },
+			deptParam() { return this.routeParams.dept },
 
-		routeDepts() { return this.$store.getters.routeDepts },
-		isStats() { return this.$store.getters.isStats },
-		departments() { return this.$store.getters.categoriesByType('department') },
-		category_all() { return this.routeDepts.find(routeDept => routeDept.deptParam == 'all') },
-		
-		// set either in config or by route
-		isAdmin(){
-			if(this.config.hasOwnProperty('admin')) return this.config.admin
-			else return (this.routeName == 'Admin' || this.locationParam == 'admin')
-		},
-		// set either in config or by route
-		isEditing(){
-			if(this.config.hasOwnProperty('editing')) return this.config.editing
-			else return (this.routeName == 'DetailsEdit' || this.routeName == 'DetailsWithIdEdit')
-		},
-		compid(){
-			if(this.config && this.config.hasOwnProperty('compid')) return this.config.compid
-			else if(this.isLandingPageCarousel) return 'landingcarousel'
+			// store.getters
+			isStats() { return this.$store.getters.isStats },
+			departmentsLoading() { return this.$store.getters.isLoading_categories },
+			departments() { return this.$store.getters.categoriesByType('department') },
+			routeDepts() { return this.$store.getters.routeDepts },		// categories + all + none
+				category_all() { return this.routeDepts.find(routeDept => routeDept.deptParam == 'all') },
+
+			// store.state or store.getters
+			storeIsLoading() {
+				if(this.isLandingPageCarousel) return this.$store.getters.isLoading_landingPageCarousel
+				else if(this.isStatsCarousel || this.isMetricsCarousel) return this.$store.getters.isLoading_detailCarousel
+				else return this.$store.state.isLoading
+			},
+			storeIsRefreshing() {
+				if(this.isLandingPageCarousel) return this.$store.state.landingPageCarouselSoftReloading
+				else if(this.isStatsCarousel || this.isMetricsCarousel) return this.$store.state.detailCarouselSoftReloading
+				else return this.$store.state.softReloading
+			},
+
+		isLoading() { return this.storeIsLoading || this.isLoadingSaved },
+
+		compid() {
+			if(this.isLandingPageCarousel) return 'landingcarousel'
 			else if(this.isStatsCarousel) return 'statscarousel'
 			else if(this.isMetricsCarousel) return 'metricscarousel'
+			else if(this.config && this.config.hasOwnProperty('compid')) return this.config.compid
 			else return 'listcarousel'
 		},
+
 		// set in config
+		timestamp() { return this.config.hasOwnProperty('timestamp') ? this.config.timestamp : null },
 		isLandingPageCarousel() { return (this.config.hasOwnProperty('type') && this.config.type == 'landingPageCarousel') },
+		isDetailCarousel() { return (this.isStatsCarousel || this.isMetricsCarousel) },
 		isStatsCarousel() { return (this.config.hasOwnProperty('type') && this.config.type == 'statsCarousel') },
 		isMetricsCarousel() { return (this.config.hasOwnProperty('type') && this.config.type == 'metricsCarousel') },
 		detailCarouselCategory() {
-			if(this.isStatsCarousel || this.isMetricsCarousel){
+			if(this.isDetailCarousel){
 				if(this.currentCategory){
 					if(this.currentCategory.hasOwnProperty('id')) return this.currentCategory
 					// handle if not provided fullCategory
@@ -242,65 +250,69 @@ export default {
 			else return null
 		},
 
-		isLoading() { return this.storeIsLoading || this.isLoadingDept },
-		storeIsLoading() {
-			if(this.isLandingPageCarousel) return this.$store.getters.isLoading_landingPageCarousel
-			else if(this.isStatsCarousel || this.isMetricsCarousel) return this.$store.getters.isLoading_detailCarousel
-			else return this.$store.state.isLoading
+		// set either in config or by route
+		isAdmin() {
+			if(this.config.hasOwnProperty('admin')) return this.config.admin
+			else return (this.routeName == 'Admin')
 		},
-		storeIsRefreshing() {
-			if(this.isLandingPageCarousel) return this.$store.state.landingPageCarouselSoftReloading
-			else if(this.isStatsCarousel || this.isMetricsCarousel) return this.$store.state.detailCarouselSoftReloading
-			else return this.$store.state.softReloading
+		isEditable() {
+			if(this.config.hasOwnProperty('editable')) return this.config.editable
+			else return false
 		},
-		departmentsLoading(){ return this.$store.getters.isLoading_categories },
+		detailsEditing() {
+			if(this.isDetailCarousel){
+				if(this.config.hasOwnProperty('editing')) return this.config.editing
+				else return (this.routeName == 'DetailsEdit' || this.routeName == 'DetailsWithIdEdit')
+			}
+			else return false
+		},
 
-		// query metrics, filtered by department or category
 		metrics_included() {
 			if(this.storeIsLoading) return []
 			else if (this.isLandingPageCarousel) {
-				// already query only
+				// including both static and query, deployed only
 				return this.$store.state.landingPageCarousel
 			}
-			else if (this.isStatsCarousel || this.isMetricsCarousel) {
-				// already query only
+			else if (this.isDetailCarousel) {
+				// including both static and query, deployed only, filter by category (from route)
 				if(this.detailCarouselCategory && this.detailCarouselCategory.id != 'all'){
 					return this.$store.getters.detailCarouselByPayload({ category: this.detailCarouselCategory, checkAll: true })
 				}
 				else return this.$store.state.detailCarousel
 			}
+			// query metrics only, filtered by department
 			else {
-				if(this.isLoadingDept) return []
+				if(this.isLoadingSaved) return []
 				else if(this.department.id != 'all'){
-					return this.$store.getters.metricsByPayload({ type: 'query', category: this.department })
+					return this.$store.getters.metricsByPayload({ type: 'query', category: this.department, status: 'deployed' })
 				}
-				else return this.$store.getters.metricsByPayload({ type: 'query' })
+				else return this.$store.getters.metricsByPayload({ type: 'query', status: 'deployed' })
 			}
 		},
 		// filtered by dropdown values
-		filteredMetrics(){
+		filteredMetrics() {
 			return this.metrics_included.filter(metric => {
 				var keep = true
-				if (this.filter1.attr)
-					keep = metric[this.filter1.attr] == this.filter1.value
+				if (this.filter1.attr) keep = metric[this.filter1.attr] == this.filter1.value
 				if (!keep) return false
-				if (this.filter2.attr)
-					keep = metric[this.filter2.attr] == this.filter2.value
+				if (this.filter2.attr) keep = metric[this.filter2.attr] == this.filter2.value
 				if (!keep) return false
-				if (this.filter3.attr)
-					keep = metric[this.filter3.attr] == this.filter3.value
-				if (!keep) return false
+				if (this.filter3.attr) keep = metric[this.filter3.attr] == this.filter3.value
 				return keep
 			})
 		},
 		countFilteredMetrics(){ return this.filteredMetrics.length },
 		sortedMetrics(){
 			return this.filteredMetrics.sort((a,b) => {
-				if(a[this.sorter.by] === null) return (this.sorter.order*-1)
-				if(b[this.sorter.by] === null) return (this.sorter.order)
-				if(isNaN(a[this.sorter.by]) || isNaN(b[this.sorter.by])){
-					if (a[this.sorter.by].toLowerCase().replace(/ /g, '') > b[this.sorter.by].toLowerCase().replace(/ /g, '')) return (this.sorter.order)
-					if (a[this.sorter.by].toLowerCase().replace(/ /g, '') < b[this.sorter.by].toLowerCase().replace(/ /g, '')) return (this.sorter.order*-1)
+				if(this.sorter.by == 'CurrentColor'){
+					var colorA = this.getColorOrder(a[this.sorter.by])
+					var colorB = this.getColorOrder(b[this.sorter.by])
+					if(colorA > colorB) return 1
+					if(colorA < colorB) return -1
+				}
+				else if(isNaN(a[this.sorter.by]) || isNaN(b[this.sorter.by])){
+					if(a[this.sorter.by].toLowerCase().replace(/ /g, '') > b[this.sorter.by].toLowerCase().replace(/ /g, '')) return (this.sorter.order)
+					if(a[this.sorter.by].toLowerCase().replace(/ /g, '') < b[this.sorter.by].toLowerCase().replace(/ /g, '')) return (this.sorter.order*-1)
 				}
 				else{
 					var comp = a[this.sorter.by] - b[this.sorter.by]
@@ -308,16 +320,15 @@ export default {
 					if(comp < 0) return (this.sorter.order*-1)
 				}
 				if(this.sorter.by != 'realtimeshortname'){
-					if (a.realtimeshortname.toLowerCase().replace(/ /g, '') > b.realtimeshortname.toLowerCase().replace(/ /g, '')) return 1
-					if (a.realtimeshortname.toLowerCase().replace(/ /g, '') < b.realtimeshortname.toLowerCase().replace(/ /g, '')) return -1
+					if(a.realtimeshortname.toLowerCase().replace(/ /g, '') > b.realtimeshortname.toLowerCase().replace(/ /g, '')) return 1
+					if(a.realtimeshortname.toLowerCase().replace(/ /g, '') < b.realtimeshortname.toLowerCase().replace(/ /g, '')) return -1
 				}
 				return 0
 			})
 		},
-
 		splitMetrics() {
 			var splits = []
-			var pageSize = (this.config.pageSize ? this.config.pageSize : 10)
+			var pageSize = ((this.config.hasOwnProperty('pageSize') && this.config.pageSize) ? this.config.pageSize : 10)
 			var _copy = JSON.parse(JSON.stringify(this.sortedMetrics))
 			while (_copy.length) {
 				splits.push(_copy.slice(0,pageSize))
@@ -327,10 +338,12 @@ export default {
 		},
 
 		queryMetrics() {
-			if(this.config.editable) return this.$store.getters.metricsByPayload({ type: 'query' })
+			if(!this.isLandingPageCarousel && !this.isDetailCarousel){
+				return this.$store.getters.metricsByPayload({ type: 'query', status: 'deployed' })
+			}
 		},
 		filteredDepartments(){
-			if(this.config.editable && !this.departmentsLoading){
+			if(this.isEditable && !this.departmentsLoading){
 				if(this.queryMetrics.length == 0) return this.departments
 				else return this.departments.filter(department => {
 					return this.queryMetrics.some(metric => {
@@ -341,13 +354,9 @@ export default {
 			} else return null
 		},
 
-		onlyMetrics(){ return ( this.isMetricsCarousel || (!this.isStats && !this.isAdmin && !this.isLandingPageCarousel && !this.isStatsCarousel) ) },
-		onlyStats(){ return ( this.isStatsCarousel || (this.isStats && !this.isAdmin && !this.isLandingPageCarousel && !this.isMetricsCarousel) ) },
-		isCombo(){ return (this.isAdmin || this.isLandingPageCarousel) },
-
 		title(){
 			var title = ''
-			if(this.isLandingPageCarousel || this.isStatsCarousel || this.isMetricsCarousel){
+			if(this.isLandingPageCarousel || this.isDetailCarousel){
 				if(this.isLandingPageCarousel) title = 'All Departments'
 				else{
 					if(this.detailCarouselCategory) title = this.detailCarouselCategory.display
@@ -361,14 +370,14 @@ export default {
 					else title = 'All Departments'
 					if(this.storeIsLoading) title += ' (Loading...)'
 				}
-				else if(this.isLoadingDept) title = 'Loading...'
+				else if(this.isLoadingSaved) title = 'Loading...'
 				else title = 'ERROR'
 			}
 			return title
 		},
 		showDeptCol(){
 			if(this.isLandingPageCarousel) return true
-			else if(this.isStatsCarousel || this.isMetricsCarousel){
+			else if(this.isDetailCarousel){
 				if(this.detailCarouselCategory) return (this.detailCarouselCategory.type != 'department')
 				else return true
 			}
@@ -379,11 +388,16 @@ export default {
 			var len = 4
 			if(this.showDeptCol) len++
 			if(this.isCombo) len++
-			if(!this.onlyStas) len++
+			if(!this.onlyQuery) len++
+			if(!this.onlyStats) len++
 			if(this.isAdmin) len += 3
 			return len
-		}
+		},
 
+		onlyMetrics(){ return ( this.isMetricsCarousel || (!this.isStats && !this.isAdmin && !this.isLandingPageCarousel && !this.isStatsCarousel) ) },
+		onlyStats(){ return ( this.isStatsCarousel || (this.isStats && !this.isAdmin && !this.isLandingPageCarousel && !this.isMetricsCarousel) ) },
+		isCombo(){ return (this.isAdmin || this.isLandingPageCarousel) },
+		onlyQuery(){ return !(this.isLandingPageCarousel || this.isStatsCarousel || this.isMetricsCarousel) },
 	},
 
 	watch: {
@@ -397,10 +411,11 @@ export default {
 			},
 		},
 		isLoading:{
-			immediate: true,
+			immediate: false,
 			handler(newVal, oldVal) {
+				if(this.debug) console.log('isLoading: ' + oldVal  + ' -> ' + newVal)
 				// during load, reset timer, needs initialization again
-				if(!newVal && oldVal){
+				if(newVal && !oldVal){
 					this.resetTimer()
 					this.needsInit_timer = true
 				}
@@ -413,6 +428,22 @@ export default {
 						Vue.nextTick(this.initTimer)
 					}
 				}
+			},
+		},
+		timestamp:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(this.isStatsCarousel || this.isMetricsCarousel){
+					if(this.debug) console.log('routeParams changed: /' + newVal.location)
+				}
+			},
+		},
+
+		//debug
+		storeIsLoading:{	// debug only
+			immediate: true,
+			handler(newVal, oldVal) {
+				if(this.debug) console.log('storeIsLoading: ' + oldVal  + ' -> ' + newVal)
 			},
 		},
 	},
@@ -434,7 +465,7 @@ export default {
 
 			if(this.routeName.toLowerCase() == 'donna'){
 				this.sorter.by = 'CurrentColor'
-				this.sorter.order = 1
+				this.sorter.order = -1
 			}
 			else if(this.config.hasOwnProperty('sorter')){
 				if(this.config.sorter.hasOwnProperty('by') && this.config.sorter.by) this.sorter.by = this.config.sorter.by
@@ -450,21 +481,21 @@ export default {
 					}
 				}
 			}
-			this.initDropdowns()	// visible initially so can call on init
+			if(this.needsMatInit) this.initMaterialize()	// dropdowns visible initially so can call on init
 
 			// don't start timer if config autoplay is off
 			if(this.config.hasOwnProperty('autoplay') && !this.config.autoplay) this.autoplay = this.config.autoplay
 
-			if(this.isLandingPageCarousel || this.isStatsCarousel || this.isMetricsCarousel) this.isLoadingDept = false
+			if(this.isLandingPageCarousel || this.isStatsCarousel || this.isMetricsCarousel) this.isLoadingSaved = false
 			else if(this.saveSettings) this.checkLocalStorage()
 			else{
 				this.department = this.category_all
-				this.isLoadingDept = false
+				this.isLoadingSaved = false
 			}
 
 			this.needsInit = false
 		},
-		initDropdowns(){
+		initMaterialize(){
 			$('#' + this.compid + '-sorter-dropdown').dropdown({
 				constrainWidth: true, // Does not change width of dropdown to that of the activator
 				belowOrigin: true,  // Displays dropdown below the button
@@ -475,17 +506,20 @@ export default {
 				belowOrigin: true,  // Displays dropdown below the button
 				alignment: 'left' // Displays dropdown with edge aligned to the left of button
 			})
-			this.needsInit_materialize = false
+			this.needsMatInit = false
 		},
+
 		initTimer(){
 			if(this.debug) console.log('initTimer')
 			if(this.autoplay) this.startTimer()
 			this.needsInit_timer = false
 		},
-		// clears interval, doesn't change this.autoplay, doesn't change this.page or this.progress yet
-		resetTimer(){
-			if(this.debug) console.log('resetTimer')
-			if(this.timer) this.timer = clearInterval(this.timer)
+		startTimer() {
+			if(this.debug) console.log('startTimer')
+			this.timer = setInterval(function() {
+				this.progress -= 10
+				if (this.progress <= 0) this.setPage(this.page+1, false)
+			}.bind(this), 1000)
 		},
 		restartTimer(){
 			if(this.debug) console.log('restartTimer')
@@ -498,13 +532,10 @@ export default {
 				else this.startTimer()
 			}
 		},
-
-		startTimer() {
-			if(this.debug) console.log('startTimer')
-			this.timer = setInterval(function() {
-				this.progress -= 10
-				if (this.progress <= 0) this.setPage(this.page+1, false)
-			}.bind(this), 1000)
+		// clears interval, doesn't change this.autoplay, doesn't change this.page or this.progress yet
+		resetTimer(){
+			if(this.debug) console.log('resetTimer')
+			if(this.timer) this.timer = clearInterval(this.timer)
 		},
 
 		setPage(pg, sticky) {
@@ -518,13 +549,12 @@ export default {
 		},
 
 		gotoMetric(metric) {
-			if(this.isEditing) this.gotoMetricEdit(metric)
+			if(this.detailsEditing) this.gotoMetricEdit(metric)
 			else{
 				var metricLinks = this.$store.getters.metricLinks(metric)
 				if(metricLinks.editOnly){
 					if(!this.isAdmin){
 						console.error('EDIT ONLY ROUTE')
-						return
 					}
 					else this.gotoMetricEdit(metric)
 				}
@@ -583,25 +613,47 @@ export default {
 			if (this.saveSettings) this.saveSettings.callback(this.compid, department.display)
 		},
 
-		metricValue(metric, val) {
-			var metricValue = this.$store.getters.metricValue({metric: metric, val: val, short: true})
-			if(metricValue.error) return '[[error 1000]]'
-			else return metricValue.str
+		metricValue(metric, col) {
+			var isStatic = false
+			if(!this.onlyQuery){
+				isStatic = this.checkIfStatic(metric)
+			}
+
+			if(!isStatic || (isStatic && col == 'current')){
+				var metricValue = this.$store.getters.metricValue({metric: metric, val: col, short: true})
+				if(metricValue.error) return '[[error 1000]]'
+				else return metricValue.str
+			}
+			else return '---'
 		},
 		checkIfStat(metric){
 			if(this.onlyStats) return true
 			else if(this.onlyMetrics) return false
 			else return this.$store.getters.checkIfStat(metric)
 		},
-		getTextColor(metric){
-			if(this.checkIfStat(metric)) return 'grey-text'
-			else return metric.CurrentColor+'-text'
+		checkIfStatic(metric){
+			if(this.onlyQuery) return false
+			else return this.$store.getters.checkIfStatic(metric)
+		},
+		getTextColor(metric, col){
+			if(this.checkIfStatic(metric)){
+				if(col == 'current') return 'grey-text text-darken-1'
+				else return 'grey-text'
+			}
+			else return metric.CurrentColor + '-text text-darken-1'
 		},
 		get_metricRouteLocation(metric){
 			return this.$store.getters.metricRouteLocation(metric)
 		},
 		getTypeOfText(metric){
-			return this.get_metricRouteLocation(metric).typeOf
+			if(this.isCombo) return this.get_metricRouteLocation(metric).typeOf
+
+			/*var typeOf = '', type = ''
+			if(this.isCombo) typeOf = this.get_metricRouteLocation(metric).typeOf
+			if(!this.onlyQuery && this.checkIfStatic(metric)) type = 'Static'
+			if(typeOf && type) return typeOf + ' - ' + type
+			else if(type) return type
+			else return typeOf*/
 		},
 		getLocationText(metric){
 			return this.get_metricRouteLocation(metric).display
@@ -612,6 +664,21 @@ export default {
 			else if(status == 'deployed') return 'Public'
 			else if(status == 'review') return 'Review'
 			else return 'Development'
+		},
+
+		getColorOrder(color){
+			if(color === null) return 4
+			else if(color.toLowerCase() == 'grey') return 4
+			else if(color.toLowerCase() == 'light-green') return 2
+			else if(color.toLowerCase() == 'green'){
+				if(this.sorter.order < 0) return 3
+				else return 1
+			}
+			else if(color.toLowerCase() == 'red'){
+				if(this.sorter.order < 0) return 1
+				else return 3
+			}
+			else return 5
 		},
 
 		// for refreshing
@@ -627,24 +694,24 @@ export default {
 					var _root = JSON.parse(localStorage.getItem(this.saveSettings.localStorageKey))
 					if (_root.hasOwnProperty(this.compid)){
 						var departmentDisplay = _root[this.compid]
-						var savedDepartment = this.$store.findCategoryByDisplay({ type:'department', display: departmentDisplay})
+						var savedDepartment = this.$store.getters.findCategoryByDisplay({ type:'department', display: departmentDisplay})
 						if(!savedDepartment) this.department = this.category_all
 						else this.department = savedDepartment
-						this.isLoadingDept = false
+						this.isLoadingSaved = false
 					}
 					else{
 						this.department = this.category_all
-						this.isLoadingDept = false
+						this.isLoadingSaved = false
 					}
 				}
 				else{
 					this.department = this.category_all
-					this.isLoadingDept = false
+					this.isLoadingSaved = false
 				}
 			} catch(e) {
 				console.error(e)
 				this.department = this.category_all
-				this.isLoadingDept = false
+				this.isLoadingSaved = false
 			}
 		},
 	}
@@ -656,28 +723,66 @@ export default {
 .pointy {
 	cursor: pointer;
 }
-table.highlight > tbody > tr:hover {
-    background-color: rgba(0,0,0, 0.2);	/* grey */
-    cursor: pointer;
+
+/* colors */
+.col-purple {
+    background-color: #5A348D !important;
+    color: white;
+}
+.col-purple-text{
+	color: #5A348D !important;
+}
+
+.donna .background {
+	padding: 0 24px;
 }
 .background {
 	height: 100%;
 	padding: 16px 24px;
 	position: relative;
-	overflow-x: scroll;
 }
+.card {
+	margin-bottom: 0;
+}
+.dark .background {
+	background-color: rgba(0,0,0,0.1)
+}
+
+.edit-button {
+	position: absolute;
+	top: 0;
+	right: 8px;
+	padding: 0;
+}
+
 .title {
 	font-size: 1.4rem;
 	font-family: 'Product Sans';
 	padding: 8px 16px;
 }
-table td.value {
+
+.donna table > thead > tr > th, .donna table > tbody > tr > td {
+	padding: 8px 5px !important;
+}
+.low-padding table > thead > tr > th, .low-padding table > tbody > tr > td {
+	padding: 5px 5px !important;
+}
+table > tbody > tr > td a {
+	padding: 0 16px;
+}
+
+table.highlight > tbody > tr:hover {
+    background-color: rgba(0,0,0, 0.2);	/* grey */
+    cursor: pointer;
+}
+table td.value:not(.static-metric) {
 	font-family: 'Product Sans';
 	font-weight: bold;
 	font-size: 1.25rem;
 }
-table > tbody > tr > td a {
-	padding: 0 16px;
+table td.value.static-metric {
+	font-family: 'Product Sans';
+	font-size: 1rem;
 }
 
 /* buttons */
@@ -691,11 +796,6 @@ table > tbody > tr > td a {
 .btn-flat.active {
     background-color: #3c225d;
     color: white;
-}
-.edit-button {
-	position: absolute;
-	top: 0;
-	right: 0;
 }
 
 /* dropdowns */
@@ -771,23 +871,6 @@ i.material-icons.active {
 }
 .slideup-enter, .slideup-leave {
 	transform: translate3d(0, -100px, 0);
-}
-
-
-.donna table > thead > tr > th, .donna table > tbody > tr > td {
-	padding: 8px 5px !important;
-}
-.lp-carousel table > thead > tr > th, .lp-carousel table > tbody > tr > td {
-	padding: 5px 5px !important;
-}
-
-/* colors */
-.col-purple {
-    background-color: #5A348D !important;
-    color: white;
-}
-.col-purple-text{
-	color: #5A348D !important;
 }
 
 </style>

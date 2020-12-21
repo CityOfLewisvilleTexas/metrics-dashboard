@@ -21,12 +21,14 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'ListOfDepartmentsButton',					// USED IN ListofMetrics.vue (if editable) -> Admin.vue?
+	name: 'ListOfDepartmentsButton',					// USED IN ListofMetrics.vue (if editable) -> Admin.vue
 	components: {},
 	props: {
+		// compid
 		config: {
 			type: Object,
 			required: false,
+			default: null,
 		},
 		// used by ListOfMetrics
 		filteredDepartments:{
@@ -44,28 +46,32 @@ export default {
 		return {
 			debug: true,
 			needsInit: true,
-			isOpen: false,
+
+			isOpen: false,		// not possible in Materialize v0.100.2
 		}
 	},
 
 	computed: {
-		category_all(){ this.$store.state.categoryAll },
-		storeIsLoading() { return this.$store.state.isLoading },
-		storeIsRefreshing() { return this.$store.state.softReloading },
-		departmentsLoading(){ return this.$store.getters.isLoading_categories },
-		allDepartments() { return this.$store.getters.categoriesByType('department') },
+			// store.state
+			storeIsLoading() { return this.$store.state.isLoading },
+			storeIsRefreshing() { return this.$store.state.softReloading },
+			// store.getters
+			departmentsLoading(){ return this.$store.getters.isLoading_categories },
+			allDepartments() { return this.$store.getters.categoriesByType('department') },
+			routeDepts() { return this.$store.getters.routeDepts },
+				category_all() { return this.routeDepts.find(routeDept => routeDept.deptParam == 'all') },
 
 		compid(){
-			if(this.config && this.config.hasOwnProperty('compid')) return this.config.compid
+			if(this.config && this.config.hasOwnProperty('compid') && this.config.compid) return this.config.compid
 			else return 'listdeptdropdown'
 		},
 
 		// props may include filtered departments to use instead of all departments (ex ListOfMetrics only shows departments with query metrics)
 		departments(){
-			if(this.filteredDepartments) return this.filteredDepartments
+			if(this.departmentsLoading) return []
+			else if(this.filteredDepartments) return this.filteredDepartments
 			else return this.allDepartments
 		},
-		// departments length will be 0 on initial load
 		countDepartments(){ return this.departments.length },
 	},
 
@@ -89,6 +95,7 @@ export default {
 	},
 	beforeDestroy() {
 		if(this.debug) console.log('Destroy')
+// DNE?
 		$('#' + this.compid).dropdown('destroy')
 	},
 
@@ -96,15 +103,24 @@ export default {
 	methods: {
 		initDropdown(){
 			if(this.debug) console.log('initDropdown')
+// OPTIONS DNE?
 			$('#' + this.compid).dropdown({ constrainWidth: false, closeOnClick: true, onOpenStart: this.setOpen, onCloseStart: this.setClose })
 			this.needsInit = false;
 		},
 		updateDropdown(){
 			if(this.debug) console.log('updateDropdown')
+// DNE?
 			$('#' + this.compid).dropdown('recalculateDimensions')
 		},
-		setOpen() { this.isOpen = true },
-		setClose() { this.isOpen = false },
+
+		setOpen() {
+			if(this.debug) console.log('setOpen')
+			this.isOpen = true
+		},
+		setClose() {
+			this.isOpen = false
+			if(this.debug) console.log('setOpen')
+		},
 	}
 }
 </script>

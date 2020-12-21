@@ -14,7 +14,7 @@
 <script>
 import Vue from 'vue'
 export default {
-	name: 'GoalsPie',					// USED IN Admin.vue (NEEDS CHANGE)
+	name: 'GoalsPie',					// NO LONGER USED IN ADMIN
 	components: {},
 	props: ['config'],
 	data () {

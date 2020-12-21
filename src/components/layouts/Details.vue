@@ -4,12 +4,17 @@
 			<div class="navbar-fixed">
 				<nav>
 					<div id="top-nav" class="nav-wrapper col-purple left-align">
-						<a data-activates="slide-out" id="details-side-nav" class="button-collapse"><i class="material-icons">menu</i></a>
-						<div class="logo"></div>
-						<div class="brand-logo white-text text-darken-3">City of Lewisville</div>
+						<a data-activates="slide-out" id="details-side-nav" class="button-collapse">
+							<i class="material-icons">menu</i>
+						</a>
+						<div class="logo hide-on-med-and-down"></div>
+						<div class="city-brand white-text text-darken-3">City of Lewisville</div>
 						<ul class="right">
-							<li v-if="showCarousel">
-								<a @click="scrollToCarousel('#details_carousel')">{{carouselType == 'statsCarousel' ? 'Stats' : 'Metrics'}}</a>
+							<li v-if="!underLarge && !isLoading && showCarousel">
+								<a @click="scrollToCarousel('#details_carousel')">
+									{{carouselType == 'statsCarousel' ? 'Stats' : 'Metrics'}}
+									<i class="tiny material-icons left">bookmark_border</i>
+								</a>
 							</li>
 							<li v-if="isEditing">
 								<select class="browser-default" v-model="showStatusParam">
@@ -22,7 +27,7 @@
 								</a>
 							</li>
 							<li>
-								<a @click="fetchMetrics">
+								<a @click="fetchMetrics" data-position="left" data-delay="0" data-tooltip="Refresh" class="tooltipped">
 									<i class="material-icons" :class="{ active : storeIsRefreshing }">refresh</i>
 								</a>
 							</li>
@@ -40,7 +45,7 @@
 					<ul>
 						<li class="divider"></li>
 
-						<li class="header">Location</li>
+						<li class="header">LOCATION</li>
 
 						<li v-if="allLocationsDisabled" class="header">{{ location_all.display }}<span class="right">{{ getCountByLocation(location_all) }}</span></li>
 
@@ -59,7 +64,7 @@
 							<ul>
 								<li class="divider"></li>
 
-								<li class="header">Category</li>
+								<li class="header">CATEGORY</li>
 
 								<li v-if="allCategoriesDisabled" class="header">All Categories<span class="right">{{ getCountByCategory(category_all) }}</span></li>
 
@@ -92,58 +97,64 @@
 
 		<main>
 			
-			<div class="row second-nav">
-				<div class="col s12 white left-align">
-					<!--<transition appear name="fade">-->
-						<div v-if="currentCategory && currentCategory.id != 'loading'" class="deptname blue-grey-text text-darken-2">
-							{{ currentCategory.display }}
-							<small class="grey-text"> ({{ countMetrics_shown }})</small>
-							<small v-if="isEditing" class="grey-text">[{{currentRouteLocation.display}} - {{currentStatus.display}}]</small>
+			<div class="navbar-fixed second-nav">
+				<nav>
+					<div class="nav-wrapper white left-align">
+						<div class="col s12">
+							<div v-if="currentCategory && currentCategory.id != 'loading'" class="second-nav-title col-purple-text">
+								{{ currentCategory.display }}
+								<small class="grey-text"> ({{ countMetrics_shown }})</small>
+								<small v-if="isEditing" class="grey-text">[{{currentRouteLocation.display}} - {{currentStatus.display}}]</small>
+							</div>
+							<ul class="right">
+								<li v-if="isEditing && refreshedAt" class="grey-text">Updated: {{refreshedAt}}</li>
+								<li v-if="underLarge && !isLoading && showCarousel">
+									<a @click="scrollToCarousel('#details_carousel')" class="black-text">
+										{{carouselType == 'statsCarousel' ? 'Stats' : 'Metrics'}}
+										<i class="tiny material-icons left">bookmark_border</i>
+									</a>
+								</li>
+								<li v-if="underLarge">
+									<a class="btn amber black-text" :href="landingURL">
+										<span>dashboard</span>
+									</a>
+								</li>
+							</ul>
 						</div>
-					<!--</transition>-->
-				</div>
-				<ul class="right">
-					<li v-if="isEditing && refreshedAt">Updated: {{refreshedAt}}</li>
-					<li v-if="underLarge">
-						<a class="btn amber black-text" :href="landingURL">
-							<span>dashboard</span>
-						</a>
+					</div>
+				</nav>
+			</div>
+
+
+			<div v-if="isLoading" class="spinner main">
+				<div class="double-bounce1"></div>
+				<div class="double-bounce2"></div>
+			</div>
+
+			<div v-if="!isLoading" class="main">
+				<ul id="metric-list" class="row">
+					<li v-if="extraLink">
+						<div class="col s12 left-align">
+							[See also: <a :href="extraLink.link" target="_blank">{{ extraLink.text }}</a>]
+						</div>
+					</li>
+					<li v-if="countMetrics_shown == 0" class="categoryEmpty">
+						No {{ isStatsFull ? 'Stats' : 'Metrics' }} found here.
+					</li>
+					<li v-for="metric in sortedMetrics" :key="metric[primaryKey]" class="col s12 m10 l10 xl8 offset-m1 offset-l1 offset-xl2">
+						<MetricCard :metric="metric" :config="cardconfig" />
+					</li>
+				</ul>
+
+				<ul v-if="showCarousel" id="details_carousel" class="row">
+					<li class="divider"></li>
+					<li class="detail-carousel-title">{{carouselType == 'statsCarousel' ? 'Stats' : 'Metrics'}}</li>
+					<li class="col s12 l12 xl10 offset-xl1">
+						<ListOfMetrics :config="carouselconfig" :currentCategory="currentCategory" />
 					</li>
 				</ul>
 			</div>
 
-			<div class="container">
-
-				<div class="spinner main" v-if="isLoading">
-					<div class="double-bounce1"></div>
-					<div class="double-bounce2"></div>
-				</div>
-				<div class="row main">
-					<ul id="metric-list" class="row" v-if="!isLoading">
-						<li v-if="extraLink">
-							<div class="col s12 left-align">
-								[See also: <a :href="extraLink.link" target="_blank">{{ extraLink.text }}</a>]
-							</div>
-						</li>
-						<li v-if="countMetrics_shown == 0">
-							No metrics found here.
-						</li>
-						<li v-for="metric in sortedMetrics" :key="metric[primaryKey]" class="col s12 m10 l10 xl8 offset-m1 offset-l1 offset-xl2">
-							<MetricCard :metric="metric" :config="cardconfig" />
-						</li>
-					</ul>
-
-					<div class="divider" v-if="showCarousel"></div>
-					<h2 v-if="showCarousel">{{carouselType == 'statsCarousel' ? 'Stats' : 'Metrics'}}</h2>
-					<div v-if="showCarousel" class="row" shortcut>
-						<div class="col s12 l12 xl10 offset-xl1 grid" id="g1">
-							<ListOfMetrics id="details_carousel" :config="carouselconfig" :currentCategory="currentCategory" />
-						</div>
-					</div>
-
-				</div>
-
-			</div>
 		</main>
 	</div>
 
@@ -157,9 +168,7 @@ import SearchMetricsBar from '../widgets/SearchMetricsBar'
 import MetricCard from '../widgets/MetricCard'
 export default {
 	name: 'Details',
-	components: {
-		ListOfMetrics, SearchMetricsBar, MetricCard
-	},
+	components: { ListOfMetrics, SearchMetricsBar, MetricCard },
 	props: [],
 	beforeRouteUpdate (to, from, next) {
 		if(this.routeDebug) console.log(to.name)
@@ -190,16 +199,16 @@ export default {
 				if(needsUpdate) next({ name: to.name, params: newParams })
 				else{
 					if(newParams.location == 'internal'){
-						if(this.$store.state.userEmail){
-							if(this.routeDebug) console.log('email in store')
+						if(this.$store.state.userEmail && this.$store.state.authToken){
+							if(this.routeDebug) console.log('email & token in store')
 							next()
 						}
 						else{
 							if(this.securityDebug || (sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail)){
-								if(this.securityDebug) this.$store.commit('login', { email: 'clarson@cityoflewisville.com' })
+								if(this.securityDebug) this.$store.commit('login', { email: 'clarson@cityoflewisville.com', authToken: '13107057BB20449E84CC02866214DF3676E8E98E9B2C40248AB3EB5AB7A3B076498726B308EB4A51B24B9E555EC38EF4' })
 								else{
 									if(this.routeDebug) console.log('already auth')
-									this.$store.commit('login', { email: localStorage.colEmail })
+									this.$store.commit('login', { email: localStorage.colEmail, authToken: localStorage.authToken })
 								}
 								next()
 							}
@@ -243,16 +252,16 @@ export default {
 			}
 			if(needsUpdate) next({ name: to.name, params: newParams })
 			else{
-				if(this.$store.state.userEmail){
-					if(this.routeDebug) console.log('email in store')
+				if(this.$store.state.userEmail && this.$store.state.authToken){
+					if(this.routeDebug) console.log('email & token in store')
 					next()
 				}
 				else{
 					if(this.securityDebug || (sessionStorage.authChecked && localStorage.colAuthToken && localStorage.colEmail)){				
-						if(this.securityDebug) this.$store.commit('login', { email: 'clarson@cityoflewisville.com' })
+						if(this.securityDebug) this.$store.commit('login', { email: 'clarson@cityoflewisville.com', authToken: '13107057BB20449E84CC02866214DF3676E8E98E9B2C40248AB3EB5AB7A3B076498726B308EB4A51B24B9E555EC38EF4' })
 						else{
 							if(this.routeDebug) console.log('already auth')		
-							this.$store.commit('login', { email: localStorage.colEmail })
+							this.$store.commit('login', { email: localStorage.colEmail, authToken: localStorage.authToken })
 						}
 						next()
 					}
@@ -325,59 +334,79 @@ export default {
 	},
 
 	computed: {
-		// route
-		routeName() { return this.$route.name },
-		routeParams() { return this.$route.params },
-		locationParam() { return this.routeParams.location },
-		deptParam() { return this.routeParams.dept },
-		idParam() { return this.routeParams.id },
-		statusParam() { return this.routeParams.status },	//return this.debug ? 'deployed' : this.routeParams.status
+			// route
+			routeName() { return this.$route.name },
+			routeParams() { return this.$route.params },
+			locationParam() { return this.routeParams.location },
+			deptParam() { return this.routeParams.dept },
+			idParam() { return this.routeParams.id },
+			statusParam() { return this.routeParams.status },	//return this.debug ? 'deployed' : this.routeParams.status
 
-		// store.state
-		storeDebug() { return this.$store.state.debug },
-		routeDebug() { return this.$store.state.routeDebug },
-		securityDebug() { return this.$store.state.securityDebug },
-		storeIsLoading() { return this.$store.state.isLoading },
-		storeIsRefreshing() { return this.$store.state.softReloading },
-		refreshedAt() { return this.$store.state.fromNow },
-		underLarge() { return this.$store.state.underLarge },
-		landingURL() { return this.$store.state.landingURL },
-
-		// store.getters
-		isStats() { return this.$store.getters.isStats },
-		routeLocations() { return this.$store.getters.routeLocations },
-		routeStatuses() { return this.$store.getters.routeStatuses },
-		routeDepts() { return this.$store.getters.routeDepts },
-		redirectURL() { return this.$store.getters.redirectURL },
-		primaryKey() { return this.$store.getters.psofiaVars.primaryKey },
-		categoriesLoading() { return this.$store.getters.isLoading_categories },
-		categoryTypes() { return this.$store.getters.categoryTypes },
-		carouselIsLoading() { return this.$store.getters.isLoading_detailCarousel },
-		carouselIsRefreshing() { return this.$store.state.detailCarouselSoftReloading },
-
-		// store.getters with params
-		currentRouteLocation() { return this.$store.getters.routeLocationByLocationParam(this.locationParam) },
-		currentCategory() { return this.$store.getters.fullCategoryByDeptParam(this.deptParam) },
-		currentStatus() { return this.$store.getters.fullStatusByStatusParam(this.statusParam) },
+			// store.state
+			storeDebug() { return this.$store.state.debug },
+			routeDebug() { return this.$store.state.routeDebug },
+			securityDebug() { return this.$store.state.securityDebug },
+			storeIsLoading() { return this.$store.state.isLoading },
+			storeIsRefreshing() { return this.$store.state.softReloading },
+			refreshedAt() { return this.$store.state.fromNow },
+			underLarge() { return this.$store.state.underLarge },
+			landingURL() { return this.$store.state.landingURL },
+			
+			// store.getters
+			isStats() { return this.$store.getters.isStats },
+			routeLocations() { return this.$store.getters.routeLocations },
+			routeStatuses() { return this.$store.getters.routeStatuses },
+			routeDepts() { return this.$store.getters.routeDepts },
+			redirectURL() { return this.$store.getters.redirectURL },
+			primaryKey() { return this.$store.getters.psofiaVars.primaryKey },
+			categoriesLoading() { return this.$store.getters.isLoading_categories },
+			categoryTypes() { return this.$store.getters.categoryTypes },
+			carouselIsLoading() { return this.$store.getters.isLoading_detailCarousel },
+			carouselIsRefreshing() { return this.$store.state.detailCarouselSoftReloading },
+			
+			// store.getters with params
+			currentRouteLocation() { return this.$store.getters.routeLocationByLocationParam(this.locationParam) },
+			currentCategory() { return this.$store.getters.fullCategoryByDeptParam(this.deptParam) },
+			currentStatus() { return this.$store.getters.fullStatusByStatusParam(this.statusParam) },
 		
 		isLoading() { return this.needsInit || this.storeIsLoading },
 		isEditing() { return (this.routeName == 'DetailsEdit' || this.routeName == 'DetailsWithIdEdit') },		// || this.debug
 
-		params() {
-			var sitename = '', status = 'deployed', type = '', master = ''
-			if (this.isEditing){
-				master = 'all'
-				status = (this.statusParam == 'missing') ? null : this.statusParam
+		isStatsFull(){
+			if(!this.isEditing){
+				if(!this.isStats && (this.locationParam == 'public' || this.locationParam == 'internal')) return false
+				else if(this.isStats && this.locationParam == 'stats') return true
 			}
-			if(this.locationParam == 'admin') sitename = 'all'
+			else{
+				if(this.locationParam == 'public' || this.locationParam == 'internal') return false
+				else if(this.locationParam == 'stats') return true
+			}
+		},
+
+		params() {
+			var sitename = '', status = 'deployed', type = '', master = '', auth = false
+			if (this.isEditing){
+				auth = true
+				master = 'all'
+				status = (this.statusParam == 'missing') ? '' : this.statusParam
+			}
+
+			if(this.locationParam == 'admin'){
+				auth = true
+				sitename = 'all'
+			}
 			else if(this.locationParam == 'stats') sitename = 'stat'
-			else if(this.locationParam == 'internal') sitename = 'metricInternal'
+			else if(this.locationParam == 'internal'){
+				auth = true
+				sitename = 'metricInternal'
+			}
 			else sitename = 'metricPublic'
 			return {
 				sitename: sitename,
 				status: status,
 				type: type,
 				master: master,
+				auth: auth,
 			}
 		},
 
@@ -404,16 +433,14 @@ export default {
 			// metrics carousel shown: stats view on stats.col, stats deployed edit view on either domain
 			var type = null
 			if(!this.isEditing){
-				// checking location param jic
-				if(!this.isStats && (this.locationParam == 'public' || this.locationParam == 'internal')) type = 'statsCarousel'
-				else if(this.isStats && this.locationParam == 'stats') type = 'metricsCarousel'
+				if(!this.isStatsFull) type = 'statsCarousel'
+				else type = 'metricsCarousel'
 			}
 			else{
 				// only show on deployed public or stats details page
 				if(this.statusParam == 'deployed'){
-					if(this.locationParam == 'public' || this.locationParam == 'internal') type = 'statsCarousel'
-					else if(this.locationParam == 'stats') type = 'metricsCarousel'
-					else type = null
+					if(!this.isStatsFull) type = 'statsCarousel'
+					else type = 'metricsCarousel'
 				}
 			}
 			return type
@@ -489,7 +516,7 @@ export default {
 			return {
 				compid: 'g1-list',
 				type: this.carouselType,
-				//timestamp: this.timestamp ? this.timestamp.valueOf() : null,
+				timestamp: this.timestamp ? this.timestamp.valueOf() : null,
 				editable: false,
 				editing: this.isEditing,
 			}
@@ -552,7 +579,7 @@ export default {
 					newParams.dept = 'all'
 				}
 				if(newVal == 'deployed'){	// on edit view deployed, can't goto all locations or all categories
-					if(newParams.location == 'admin') newParams.location = this.isStats ? 'stat' : 'public'
+					if(newParams.location == 'admin') newParams.location = this.isStats ? 'stats' : 'public'
 					if(newParams.dept == 'all' && newParams.location != 'unknown' && this.locationParam != 'internalonly') newParams.dept = 'citywide'
 				}
 				// remove id
@@ -591,11 +618,12 @@ export default {
 	beforeDestroy() {
 		if(this.debug) console.log('Destroy')
 		$("#details-side-nav.button-collapse").sideNav('destroy')
+		$('.tooltipped').tooltip('remove');
 	},
 
 	methods: {
 		init(){
-			this.initSideNav()
+			if(this.needsInit_materialize) this.initMaterialize()
 			this.resetScroll()
 			this.timestamp = Moment()
 			if(!this.isEditing) this.showStatusParam = 'deployed'
@@ -603,8 +631,12 @@ export default {
 			this.updateFetchParams()
 			this.needsInit = false
 		},
-		initSideNav(){
+		initMaterialize(){
+			// sidenav
 			$("#details-side-nav.button-collapse").sideNav()
+			// tooltip
+			$('.tooltipped').tooltip({delay: 0, position: 'left'});
+
 			this.needsInit_materialize = false
 		},
 		resetScroll() {
@@ -620,11 +652,6 @@ export default {
 			}
 			if(this.debug) console.log('Update fetch params')
 			this.$store.dispatch('updateFetchParams', payload)
-		},
-		clearMetrics() {
-			if(this.debug) console.log('Clear metrics')
-			this.$store.commit('clearMetrics')
-			this.resetScroll()
 		},
 		fetchMetrics() {
 			if(this.debug) console.log('Fetch metrics')
@@ -661,7 +688,7 @@ export default {
 			})
 		},
 		scrollToCarousel() {
-			$(window).scrollTop($('#details_carousel').offset().top-20)
+			$(window).scrollTop($('#details_carousel').offset().top - 114)
 		},
 
 		filteredRouteDeptsByType(type) {
@@ -744,25 +771,31 @@ export default {
 </script>
 
 <style scoped>
+/* COLORS */
+.col-purple {
+    background-color: #5A348D !important;
+}
+.col-purple-text {
+    color: #5A348D !important;
+}
+
 .pointy {
 	cursor: pointer;
 }
-.back {
-	margin-left: 16px;
-	cursor: pointer;
-	display: inline-block;
+
+.nav-wrapper {
+	padding-left: .75rem;
+	padding-right: .75rem;	
+}
+nav i.material-icons.left {
+	margin-right: 0;
 }
 
-.brand-logo {
-	white-space: nowrap;
-    width: 100%;
-    font-size: 1.5rem;
-    padding-left: 64px;
-}
+/* top navbar */
 .logo {
     position: absolute;
-	width: 36px;
     display: inline-block;
+	width: 36px;
     height: 100%;
     vertical-align: middle;
     background-image: url(../../../static/pmartin.svg);
@@ -770,29 +803,25 @@ export default {
     background-size: contain;
     background-position: center;
     opacity: 1;
-    margin: 0 16px;
+}
+.city-brand {
+	position: absolute;
+	display: inline-block;
+    font-size: 1.5rem;
+    margin-left: calc(36px + .75rem);
 }
 #top-nav select {
 	color: black;
 	display: inline-block;
 }
 
+/* side nav */
 /* to keep full width navbar above fixed side-nav*/
 #slide-out {
 	margin-top: 64px;
 	height: calc(100vh - 64px);
 	padding-bottom: 0;
 }
-/* for fixed side-nav */
-main {
-	padding-left: 300px;
-}
-
-ul.right {
-	position: absolute;
-    right: 0;
-}
-
 li.search {
 	padding: 1px 8px;
 }
@@ -805,40 +834,49 @@ li.header {
 	font-weight: bold;
 	text-align: left;
 	margin-left: 16px;
+	margin-right: 32px;
 }
 
-
-
-.second-nav .deptname {
-	font-size: 1.5rem;
-	margin: 8px;
-}
-.second-nav ul {
-	margin-top: 5px;
-	margin-right: 8px;
-}
-.second-nav {
-	z-index: 80;
-	-webkit-box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
-    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
-    position: fixed;
-	top: 64px;
+/* pad for fixed side-nav */
+main {
+	padding-left: 300px;
 	width: 100%;
 }
-main .main {
-	margin-top: 64px;
+
+
+.navbar-fixed.second-nav {
+	height: 50px;
+}
+.second-nav nav {
+	height: 50px;
+	line-height: 50px;
+	width: calc(100% - 300px);
+}
+.second-nav-title {
+	position: absolute;
+	display: inline-block;
+	font-size: 1.5rem;
+}
+.second-nav nav .nav-wrapper i{
+	height: 50px;
+    line-height: 50px;
+}
+
+/* actual main, margin to push below both navbars */
+.main #metric-list {
+	min-height: 300px;
+}
+
+.detail-carousel-title {
+	height: 50px;
+	line-height: 50px;
+	font-size: 1.5rem;
 }
 
 
 @media only screen and (max-width : 992px) {
-	.brand-logo {
-		white-space: nowrap;
-	    width: 100%;
-	    font-size: 1.5rem;
-	    padding-left: 64px;
-	}
-	.logo {
-		display: none;
+	nav .city-brand{
+		margin-left: 0;
 	}
 	#slide-out {
 		margin-top: 0;
@@ -847,7 +885,13 @@ main .main {
 	main {
 		padding-left: 0;
 	}
+	.second-nav nav {
+		width: 100%;
+	}
 }
+
+
+/* LOADERS */
 
 .spinner {
 	width: 60px;
@@ -904,16 +948,6 @@ nav i.material-icons.active {
 .fade-enter, .fade-leave-to{
 	opacity: 0;
 	transform: translate3d(0, 100px,0);
-}
-
-
-/* COLORS */
-
-.col-purple {
-    background-color: #5A348D !important;
-}
-.col-purple-text {
-    color: #5A348D !important;
 }
 
 </style>

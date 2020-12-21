@@ -102,7 +102,8 @@ export default {
 				sitename: 'stat',
 				status: 'deployed',
 				type: '',
-				master: ''
+				master: '',
+				auth: false,
 			},
 
 			id: 'l3',
@@ -114,32 +115,32 @@ export default {
 			navsearchconfig:{ compid: 'nav-search', nav: true, editing: false, },
 			config1: {
 				compid: 'g1-kpi',
-				recordnumber: '9CDBACA381ED4822A98E701675506CB2',
+				metricID: '9CDBACA381ED4822A98E701675506CB2',
 				editable: false
 			},
 			config2: {
 				compid: 'g2-kpi',
-				recordnumber: '842BE094717D4CFCBFD4CB9A78116695',
+				metricID: '842BE094717D4CFCBFD4CB9A78116695',
 				editable: false
 			},
 			config3: {
 				compid: 'g3-kpi',
-				recordnumber: 'DAFE8B2676B74C90945094102E7D6DB0',
+				metricID: 'DAFE8B2676B74C90945094102E7D6DB0',
 				editable: false
 			},
 			config4: {
 				compid: 'g4-kpi',
-				recordnumber: '25AB16AB1D1147E8A3C3BC04B8397F88',
+				metricID: '25AB16AB1D1147E8A3C3BC04B8397F88',
 				editable: false
 			},
 			config5: {
 				compid: 'g5-kpi',
-				recordnumber: 'D0A1C73515814064BA672E3669FB6791',
+				metricID: 'D0A1C73515814064BA672E3669FB6791',
 				editable: false
 			},
 			config7: {
 				compid: 'g7-kpi',
-				recordnumber: '4EE145D723ED4CACA81EA37518BEA519',
+				metricID: '4EE145D723ED4CACA81EA37518BEA519',
 				editable: false
 			},
 			config6: {

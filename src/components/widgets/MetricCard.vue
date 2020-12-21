@@ -182,7 +182,7 @@ export default {
 			if(this.isStatic) return { class: 'red-text', icon: 'remove', text: 'STATIC' }
 			return { class: 'orange-text', icon: 'warning', text: this.metricType ? this.metricType.toUpperCase() : 'UNKNOWN' }
 		},
-		showVsYesterday(){ return (this.metric.vsYesterday !== null && this.metric.vsYesterday !== undefined) },
+		showVsYesterday(){ return (this.isQuery && this.metric.vsYesterday !== null && this.metric.vsYesterday !== undefined) },
 		vsYesterday() {
 			if (this.metric.vsYesterday === undefined || this.metric.vsYesterday === null) return '--'
 			return (this.metric.vsYesterday >= 0 ? '+' : '') + Number(this.metric.vsYesterday.toFixed(3))

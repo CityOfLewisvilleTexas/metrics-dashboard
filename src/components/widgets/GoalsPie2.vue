@@ -1,12 +1,19 @@
 <template>
 	<div :id="compid + '-outer'" class="card outer">
+
 		<div class="title grey lighten-2 grey-text text-darken-1">
 			{{ title }}
-			<i class="material-icons right tooltipped" :data-tooltip="config.why" data-delay="0" v-if="config.why">help</i>
+			<i v-if="hasError || hasWarning" class="material-icons darken-1"
+				:class="{'red': hasError, 'orange': hasWarning}">{{hasError ? 'error' : 'warning'}}</i>
+			<i v-if="config.why" :data-tooltip="config.why" data-delay="0"
+				class="material-icons right tooltipped pointy">help</i>
 		</div>
-		<div :id="compid" class="content center-align white">
-			<canvas class="cvs"></canvas>
+
+		<div :id="compid" class="content center-align white"
+			:class="{'grey': hasError, 'lighten-4': hasError, 'white': !hasError}">
+			<canvas :id="chartID" class="cvs chart-holder"></canvas>
 		</div>
+
 	</div>
 </template>
 
@@ -25,10 +32,16 @@ export default {
 	},
 	data () {
 		return {
-			debug: true,
+			debug: false,
+			needsMatInit: true,		// materialize init
 			needsDraw: true,
+			needsRedraw: false,
+
+			// isLoading computed
 
 			goalsChart: null,
+			chartdata: [],
+
 			calcsums: {
 				red: 0,
 				yellow: 0,
@@ -43,20 +56,31 @@ export default {
 	},
 
 	computed: {
-		storeIsLoading() { return this.$store.state.isLoading },
-		storeIsRefreshing() { return this.$store.state.softReloading },
-		departmentsLoading(){ return this.$store.getters.isLoading_categories },
-		routeDepts() { return this.$store.getters.routeDepts },
-		category_all() { return this.routeDepts.find(routeDept => routeDept.deptParam == 'all') },
+			// route
+			routeName() { return this.$route.name },
+			// store.state
+			storeIsLoading() { return this.$store.state.isLoading },
+			storeIsRefreshing() { return this.$store.state.softReloading },
+			// store.getters
+			departmentsLoading(){ return this.$store.getters.isLoading_categories },
+			routeDepts() { return this.$store.getters.routeDepts },
+				category_all() { return this.routeDepts.find(routeDept => routeDept.deptParam == 'all') },
 
-		compid(){
-			if(this.config && this.config.hasOwnProperty('compid')) return this.config.compid
+		isLoading() {
+			if (this.departmentsLoading || this.storeIsLoading) return true
+			else return this.needsDraw
+		},
+
+		compid() {
+			if(this.config.hasOwnProperty('compid') && this.config.compid) return this.config.compid
 			else if(this.department) return 'goalspie2-' + this.department.id
 			//else if(this.config && this.config.hasOwnProperty('dept')) return 'goalspie2-' + this.config.dept.toLowerCase().replace(/ /g, '')
 			else return 'goalspie2'
 		},
+		chartID() { return this.compid + '-chart-holder' },
+
 		department(){
-			if(this.config.hasOwnProperty('dept')){
+			if(this.config.hasOwnProperty('dept') && this.config.dept){
 				if(!this.departmentsLoading){
 					var dept = this.$store.findCategoryByDisplay({ type:'department', display: this.config.dept })
 					if(!dept) dept = this.category_all
@@ -80,6 +104,12 @@ export default {
 		},
 		countFilteredMetrics(){ return this.filteredMetrics.length },
 
+		// set either in config or by route
+		isAdmin() {
+			if(this.config.hasOwnProperty('admin')) return this.config.admin
+			else return (this.routeName == 'Admin')
+		},
+
 		title() {
 			var title = ''
 			if(this.department) title = this.department.display + ' Metrics'
@@ -90,18 +120,7 @@ export default {
 	},
 
 	watch: {
-		// ensures that chart is destroyed and needsDraw is set when this component is recycled
-		deptID:{
-			immediate: false,
-			handler(newVal, oldVal) {
-				if(newVal){
-					if(this.debug) console.log('department changed')
-					this.clearCalc();
-					if(this.goalsChart) this.goalsChart.destroy()
-					this.needsDraw = true
-				}
-			},
-		},
+		// recalculate when metrics refresh
 		storeIsRefreshing:{
 			immediate: false,
 			handler(newVal, oldVal) {
@@ -118,10 +137,23 @@ export default {
 				}
 			},
 		},
+		// ensures that chart is destroyed and needsDraw is set when this component is recycled
+		deptID:{
+			immediate: false,
+			handler(newVal, oldVal) {
+				if(newVal){
+					if(this.debug) console.log('department changed')
+					this.clearCalc();
+					if(this.goalsChart) this.goalsChart.destroy()
+					this.needsDraw = true
+				}
+			},
+		},
 	},
 
 	mounted() {
 		if(this.debug) console.log('Mounted')
+		this.init()
 		$('.tooltipped').tooltip()
 		if(!this.storeIsRefreshing && this.countFilteredMetrics > 0) this.calculateDataForChart()
 	},
@@ -133,6 +165,17 @@ export default {
 	},
 
 	methods: {
+		init() {
+			if(this.debug) console.log('init')
+			if(this.needsMatInit) this.initMaterialize()
+
+			if(!this.storeIsRefreshing && this.countFilteredMetrics > 0) this.calculateDataForChart()
+		},
+		initMaterialize() {
+			$('.tooltipped').tooltip()
+			this.needsMatInit = false
+		},
+
 		calculateDataForChart() {
 			if(this.debug) console.log('calculateDataForChart')
 			var sums = {
@@ -212,7 +255,7 @@ export default {
 					}
 				}
 
-				var ctx = document.querySelector('#' + this.config.compid + ' canvas.cvs')
+				var ctx = document.querySelector('#' + this.chartID)
 				Vue.nextTick(() => { this.drawPieChart(ctx, config) })
 			}
 			// update chart data object to new values, duration 0 means no redraw animation
@@ -238,36 +281,40 @@ export default {
 			this.calcsums = { red: 0, yellow: 0, green: 0 }
 			this.calcpct = { red: 0, yellow: 0, green: 0 }
 		},
+		resetData(){
+
+		},
 	}
 }
 </script>
 
 <style scoped>
-canvas {
-    width: 100%;
-    height: 100%;
-}
 .outer.card {
 	height: 100%
 }
+
 .title {
 	font-size: 1.4rem;
 	font-family: 'Product Sans';
 	margin: 0;
 	padding: 8px 16px;
 }
-.pie-chart-container {
-	height: 100%;
-}
+
 .content {
 	/*height: 100%;*/
 	height: calc(100% - 48px);
 	padding: 16px;
 	/*position: relative;*/
 }
+canvas {
+    width: 100%;
+    height: 100%;
+}
+
 .noBorder {
 	border: none;
 }
+
 .dropdown-button {
 	position: absolute;
 	top: 0;
@@ -278,6 +325,7 @@ canvas {
 	overflow-y: scroll !important;
 	overflow-x: auto !important;
 }
+
 .loader {
     border: 6px solid #D1C4E9;
     border-top: 6px solid #673AB7;
@@ -287,7 +335,6 @@ canvas {
     animation: spin 2s linear infinite;
     display: inline-block;
 }
-
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

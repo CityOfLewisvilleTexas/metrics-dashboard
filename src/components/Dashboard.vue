@@ -30,7 +30,7 @@ export default {
     if(this.debug) console.log('Mounted')
     this.setSize()
     $(window).resize(this.setSize)
-    google.charts.load('current', {'packages':['gauge', 'table']})
+    google.charts.load('current', {'packages':['gauge', 'table', 'corechart']})
     google.charts.setOnLoadCallback(this.setGoogleChartsLoaded)
   },
 

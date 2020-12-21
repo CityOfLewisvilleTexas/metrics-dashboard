@@ -76,6 +76,7 @@ export default {
 				status: 'deployed',
 				type: '',
 				master: '',
+				auth: false,
 			},
 
 			id: 'l3',
@@ -91,8 +92,8 @@ export default {
 			config1: {
 				compid: 'g1-graph',
 				title: 'PD/FD Response Time to Priority 1 Calls',
-				recordid1: '87DFF30F66B5419C96B4D760DD0E2952',
-				recordid2: '30C81A8705FF48CDAA0AE5FB558041D1',
+				metricID_1: '87DFF30F66B5419C96B4D760DD0E2952',
+				metricID_2: '30C81A8705FF48CDAA0AE5FB558041D1',
 				min: 99999999,
 				anim: 1000,
 				why: ''//'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.'
@@ -100,26 +101,26 @@ export default {
 			config2: {
 				compid: 'g2-graph',
 				title: null,
-				recordid: '9B8AC26729994AA6836092D5A3492DA9',
+				metricID: '9B8AC26729994AA6836092D5A3492DA9',
 				editable: false,
 				min: 99999,
 				anim: 1000
 			},
 			config3: {
 				compid: 'g3-kpi',
-				recordnumber: 'E50DE06691B64C91807922E5CA81A1C2'
+				metricID: 'E50DE06691B64C91807922E5CA81A1C2'
 			},
 			config4: {
 				compid: 'g4-kpi',
-				recordnumber: '67132D86712A4C44BC646FCA805CDABD'
+				metricID: '67132D86712A4C44BC646FCA805CDABD'
 			},
 			config5: {
 				compid: 'g5-kpi',
-				recordnumber: 'C39AFD87551E4254B24D7CA82DA828F3'
+				metricID: 'C39AFD87551E4254B24D7CA82DA828F3'
 			},
 			config6: {
 				compid: 'g6-kpi',
-				recordnumber: 'A80DBD7EFA254B008707A533B78681D1'
+				metricID: 'A80DBD7EFA254B008707A533B78681D1'
 			},
 			config7: {
 				compid: 'g7-list'
