@@ -76,7 +76,7 @@ export default {
 			storeIsRefreshing() { return this.$store.state.softReloading },
 
 		// when to show chart: initial - wait until calculating done; usp changed - wait until calculating done
-		isLoading() { return (this.needsDraw || this.needsRedraw) && (this.storeIsLoading || this.dataLoading || this.needsFetch || this.needsSetup)) },
+		isLoading() { return (this.needsDraw || this.needsRedraw) && (this.storeIsLoading || this.dataLoading || this.needsFetch || this.needsSetup) },
 		isRefreshing() { return this.isLoading || this.storeIsRefreshing || this.dataRefreshing || this.isCalculating || this.isDrawing },
 
 		compid(){
@@ -96,7 +96,7 @@ export default {
 		isQuery() { if(this.metricType) return (this.metricType.toLowerCase() == 'query') },
 
 		// config/other setup
-		configTimestamp() { if(this.config && this.config.hasOwnProperty('timestamp') return this.config.timestamp },
+		configTimestamp() { if(this.config && this.config.hasOwnProperty('timestamp')) return this.config.timestamp },
 		title() {
 			var title = ''
 			if(this.config && this.config.hasOwnProperty('title') && this.config.title) title = this.config.title
@@ -261,7 +261,7 @@ export default {
 					DetOrAvg: 'AGG'
 				}).then(results => {
 					// confirm drawing hasn't been cancelled and metricUSP still matches returned data
-					if(if(this.isDrawing && this.metricUSP == _usp){){
+					if(this.isDrawing && this.metricUSP == _usp){
 						this.uspFetched = _usp
 						if (results.data[0]) this.metricdata = results.data[0]
 						else this.metricdata = []

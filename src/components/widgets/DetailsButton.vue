@@ -106,7 +106,7 @@ export default {
 		currentValue() { if(this.metric) return this.$store.getters.metricValue({metric: this.metric}) },
 
 		// config/other setup
-		configTimestamp() { if(this.config && this.config.hasOwnProperty('timestamp') return this.config.timestamp },
+		configTimestamp() { if(this.config && this.config.hasOwnProperty('timestamp')) return this.config.timestamp },
 		title() {
 			var title = ''
 			if(this.config && this.config.hasOwnProperty('title') && this.config.title) title = this.config.title
