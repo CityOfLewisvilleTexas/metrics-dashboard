@@ -113,32 +113,35 @@ export default {
 			},
 			config1: {
 				compid: 'g1-kpi',
-				recordnumber: '9CDBACA381ED4822A98E701675506CB2',
+				recordnumber: '9CDBACA381ED4822A98E701675506CB2',		/* Ttl Fire Calls Last 30 Days !! IN DEVELOPMENT !! */
+				/*recordnumber:'00B76E38251843EEB3DB29E83F24B303',*/		/* 12 Month Absorption (Square Foot) Total - L3:g4 in Christina's Save Settings !! METRIC NOT STAT !! */
 				editable: false
 			},
 			config2: {
 				compid: 'g2-kpi',
-				recordnumber: '842BE094717D4CFCBFD4CB9A78116695',
+				recordnumber: '842BE094717D4CFCBFD4CB9A78116695',		/* Ttl PD Calls Last 30 Days !! IN DEVELOPMENT !! */
 				editable: false
 			},
 			config3: {
 				compid: 'g3-kpi',
-				recordnumber: 'DAFE8B2676B74C90945094102E7D6DB0',
+				recordnumber: 'DAFE8B2676B74C90945094102E7D6DB0',		/* Total Library Patrons as of This Month */
 				editable: false
 			},
 			config4: {
 				compid: 'g4-kpi',
-				recordnumber: '25AB16AB1D1147E8A3C3BC04B8397F88',
+				recordnumber: '25AB16AB1D1147E8A3C3BC04B8397F88',		/* Avg Num Days to Pay Water Bill */
 				editable: false
 			},
 			config5: {
 				compid: 'g5-kpi',
-				recordnumber: 'D0A1C73515814064BA672E3669FB6791',
+				/*recordnumber: 'D0A1C73515814064BA672E3669FB6791',*/	/* Ttl # of Active Development Projects !! IN DEVELOPMENT !! */
+				recordnumber: 'CA3EF91E29234BFAA127D880DE939A90',		/* Animal Sterilization (YTD) - L3:g5 in Christina's Save Settings */
 				editable: false
 			},
 			config7: {
 				compid: 'g7-kpi',
-				recordnumber: '4EE145D723ED4CACA81EA37518BEA519',
+				/*recordnumber: '4EE145D723ED4CACA81EA37518BEA519',*/	/* Ttl Num Active Development Projects in Old Town !! IN DEVELOPMENT !! */
+				recordnumber: 'F23BD0CCB8B14C64889DA31E7F2A3974',		/* Available Inventory Buildings - L3:g6 in Christina's Save Settings !! METRIC NOT STAT !! */
 				editable: false
 			},
 			config6: {
